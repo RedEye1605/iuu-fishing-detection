@@ -77,3 +77,9 @@
 ### Final Dataset
 - gfw_events_full.parquet: 512,247 rows × 105 cols, 81.2 MB
 - vessel_behavioral_features.parquet: 14,857 vessels × 32 cols, 1.2 MB
+
+### Hotfix: Zenodo Spatial Filter (2026-04-21)
+- **Bug:** Zenodo effort was filtered by flag only (30M rows global), not by Indonesia bbox
+- **Fix:** Applied spatial filter (lat -11.5 to 6.5, lon 95 to 141.5) during raw reprocessing
+- **Result:** 613,325 rows (down from 30M), all confirmed within Indonesian waters
+- 29.5M rows were vessels with relevant flags operating globally (e.g. CHN trawlers near Antarctica)
