@@ -8,18 +8,13 @@
 
 ## 🎯 Overview
 
-Deep learning system to detect IUU fishing activities in Indonesian waters by analyzing vessel tracking data (AIS), satellite boat detections (VIIRS/SAR), and maritime contextual data using a **Spatiotemporal Graph Attention Network (ST-GAT)**.
+Deep learning system to detect IUU fishing in Indonesian waters by analyzing vessel tracking (AIS), satellite detections (VIIRS/SAR), and maritime contextual data using a **Spatiotemporal Graph Attention Network (ST-GAT)**.
 
 ### Key Innovation
 - **Graph-based modeling** — Vessels as nodes, spatial proximity as edges
 - **Temporal attention** — Capture behavioral patterns over time
 - **Multi-source fusion** — AIS + SAR + VIIRS + weather + zone boundaries
 - **Explainability** — Identify *why* a vessel is flagged as IUU
-
-### Target Outputs
-1. Binary classification: IUU vs. normal fishing activity
-2. Anomaly scoring: Risk level per vessel trajectory
-3. Interactive visualization dashboard
 
 ---
 
@@ -31,56 +26,36 @@ Deep learning system to detect IUU fishing activities in Indonesian waters by an
 
 ---
 
-## 📊 Data Status — COMPLETE ✅
-
-### Core Data (Ready for Model Development)
-
-| Dataset | Records | Coverage | Size |
-|---------|---------|----------|------|
-| **GFW Events** (fishing, encounters, loitering, port visits) | 512,272 | 2016–2025 | — |
-| **GFW SAR Presence** (satellite vessel detections) | 1,242,915 | 2020–2025 | 73 MB |
-| **GFW 4Wings Fishing Effort** | 890,411 | 2020–2025 | 69 MB |
-| **GFW Static Effort** (Zenodo) | 2/5 years | 2020–2021 | 607 MB |
-| **EEZ Shapefiles** | v12 | Global | 27 MB |
-| **Indonesia Ports** | 30 ports | — | — |
-| **BMKG Maritime Weather** | 2,921 rows | 2024 | — |
-| **VIIRS Boat Detection** | 5,001 samples | — | — |
-
-### Data Sources
-
-- **[Global Fishing Watch API](https://globalfishingwatch.org/our-apis/)** — Vessel events, SAR presence, fishing effort
-- **[Zenodo](https://zenodo.org/)** — Historical fishing effort (GFW 4Wings static)
-- **[EEZ World v12](https://www.marineregions.org/)** — Exclusive Economic Zone boundaries
-- **[BMKG](https://www.bmkg.go.id/)** — Maritime weather data
-- **[VIIRS VBD](https://eogdata.mines.edu/)** — Satellite boat detection
-- **[BPS](https://www.bps.go.id/)** — Indonesian fisheries statistics
-- **[WDPA](https://www.protectedplanet.net/)** — Marine Protected Areas
-
----
-
 ## 📁 Project Structure
 
 ```
 gemastik/
-├── data/
-│   ├── raw/
-│   │   ├── gfw/              # GFW API data (events, SAR, effort)
-│   │   ├── zenodo/           # Historical static effort data
-│   │   ├── viirs/            # VIIRS boat detection data
-│   │   ├── bmkg/             # Marine weather data
-│   │   ├── bps/              # Fisheries statistics
-│   │   └── gis/              # EEZ/MPA shapefiles
-│   └── processed/            # Cleaned, feature-engineered data
-├── docs/                     # Research plan, data sources
 ├── src/
-│   ├── gfw_api_setup.py      # GFW API integration
-│   ├── bps_data.py           # BPS fisheries data collection
-│   ├── generate_synthetic_ais.py  # Synthetic AIS data generator
-│   ├── viirs_data_setup.py   # VIIRS VBD data setup
-│   ├── mpa_data_setup.py     # MPA boundaries setup
-│   └── bmkg_weather_data.py  # Marine weather data
-├── notebooks/                # Jupyter notebooks for exploration
-├── pull_sar_data*.py         # SAR data acquisition scripts
+│   ├── __init__.py
+│   ├── data/
+│   │   ├── gfw_client.py        # GFW API client (events, SAR, effort)
+│   │   ├── bps_client.py        # BPS fisheries statistics
+│   │   ├── synthetic.py         # Synthetic AIS data generator
+│   │   ├── viirs_setup.py       # VIIRS boat detection setup
+│   │   ├── mpa_setup.py         # Marine Protected Area boundaries
+│   │   └── weather_client.py    # BMKG marine weather data
+│   ├── features/
+│   │   └── graph_builder.py     # ST-GAT graph construction (Phase 2)
+│   ├── models/
+│   │   └── stgat.py             # ST-GAT model architecture (Phase 3)
+│   └── utils/
+│       ├── config.py            # Centralized configuration
+│       └── geo_utils.py         # Geospatial utility functions
+├── scripts/
+│   ├── pull_sar_data.py         # GFW 4Wings SAR data puller
+│   └── download_large_data.sh   # Zenodo data download helper
+├── archive/                     # Deprecated script versions
+├── notebooks/                   # Jupyter exploration notebooks
+├── tests/                       # Unit tests
+├── docs/                        # Research plan & data source docs
+├── data/                        # Raw & processed data (gitignored)
+├── .env.example                 # Environment variable template
+├── pyproject.toml               # Package metadata & dependencies
 └── README.md
 ```
 
@@ -90,68 +65,75 @@ gemastik/
 
 ### Prerequisites
 - Python 3.12+
-- [uv](https://docs.astral.sh/uv/) (Python package manager)
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
 
 ### Installation
 ```bash
 cd gemastik
-
 uv venv .venv --python 3.12
 source .venv/bin/activate
 
-# Data pipeline
-uv pip install geopandas shapely folium requests beautifulsoup4 pyogrio
+# Core dependencies
+uv pip install -e ".[dev]"
 
-# ML pipeline (Phase 2)
-uv pip install torch torch_geometric scikit-learn matplotlib seaborn
+# ML pipeline (Phase 2/3)
+uv pip install -e ".[ml]"
 ```
 
-### Download Large Dataset (>100MB)
+### Environment
+```bash
+cp .env.example .env
+# Edit .env with your API keys
+```
 
-The Zenodo historical effort files are distributed via [GitHub Release](https://github.com/RedEye1605/iuu-fishing-detection/releases/tag/v1.0-data).
+### Download Large Datasets (>100MB)
+
+Zenodo historical effort files are distributed via [GitHub Release](https://github.com/RedEye1605/iuu-fishing-detection/releases/tag/v1.0-data).
 
 ```bash
 # Option 1: Setup script (requires gh CLI)
 ./scripts/download_large_data.sh
 
-# Option 2: Manual — download from the release page and extract to data/raw/zenodo/
+# Option 2: Manual download from the release page → data/raw/zenodo/
 ```
-
-| File | Size | Description |
-|------|------|-------------|
-| `fleet-monthly-csvs-10-v3-2020.zip` | 111 MB | 2020 fishing effort |
-| `fleet-monthly-csvs-10-v3-2021.zip` | 115 MB | 2021 fishing effort |
-| `fleet-monthly-csvs-10-v3-2022.zip` | 122 MB | 2022 fishing effort |
-| `fleet-monthly-csvs-10-v3-2023.zip` | 133 MB | 2023 fishing effort |
-| `fleet-monthly-csvs-10-v3-2024.zip` | 126 MB | 2024 fishing effort |
-| `fishing-vessels-v3.csv` | 110 MB | Global fishing vessel registry |
 
 ---
 
-## 📅 Timeline (Gemastik XIX 2026)
+## 📊 Data Status
+
+| Dataset | Records | Coverage |
+|---------|---------|----------|
+| GFW Events | 512,272 | 2016–2025 |
+| GFW SAR Presence | 1,242,915 | 2020–2025 |
+| GFW Fishing Effort | 890,411 | 2020–2025 |
+| EEZ Shapefiles | v12 | Global |
+| Indonesia Ports | 30 ports | — |
+| BMKG Weather | 2,921 rows | 2024 |
+| VIIRS Sample | 5,001 | — |
+
+Full report: [DATA_COMPLETENESS_REPORT.md](DATA_COMPLETENESS_REPORT.md)
+
+---
+
+## 📅 Timeline
 
 ### ✅ Week 1 — Data Acquisition (COMPLETE)
-- [x] Project structure setup
-- [x] EEZ shapefile download (v12)
-- [x] GFW API integration (512K+ events, 1.2M+ SAR, 890K+ effort)
-- [x] Synthetic data generation for development
-- [x] VIIRS VBD sample data
-- [x] BMKG maritime weather data
-- [x] Indonesia port data
-- [x] Zenodo static effort data (607MB)
+- [x] Project structure & configuration
+- [x] GFW API integration (512K+ events)
+- [x] Synthetic data generation
+- [x] VIIRS / BMKG / BPS sample data
+- [x] EEZ shapefiles & port data
 
-### 🔄 Week 2 — Data Preprocessing & EDA
+### 🔄 Week 2 — Preprocessing & EDA
 - [ ] AIS trajectory cleaning & segmentation
-- [ ] Feature engineering (speed, heading changes, zone crossings)
+- [ ] Feature engineering (speed, heading, zone crossings)
 - [ ] Spatial joins with EEZ/MPA boundaries
-- [ ] VIIRS-AIS cross-matching
 - [ ] Exploratory notebooks
 
 ### 📅 Week 3 — Model Development
 - [ ] ST-GAT architecture implementation
-- [ ] Graph construction (spatial edges + temporal sequences)
-- [ ] Training pipeline
-- [ ] Hyperparameter tuning
+- [ ] Graph construction pipeline
+- [ ] Training & hyperparameter tuning
 
 ### 📅 Week 4 — Evaluation & Polish
 - [ ] Model evaluation (precision, recall, F1, AUC)
@@ -161,16 +143,22 @@ The Zenodo historical effort files are distributed via [GitHub Release](https://
 
 ---
 
+## 🧪 Testing
+
+```bash
+pytest tests/ -v
+```
+
+---
+
 ## 📖 References
 
-1. Velickovic et al. (2018) — Graph Attention Networks (GAT)
+1. Velickovic et al. (2018) — Graph Attention Networks
 2. Yu et al. (2018) — Spatio-Temporal Graph Convolutional Networks
 3. Global Fishing Watch — https://globalfishingwatch.org/
-4. Elvidge et al. — VIIRS Boat Detection, EOG, Colorado School of Mines
-5. NOAA Technical Report — Cross-matching VMS with VIIRS for IUU detection
+4. Elvidge et al. — VIIRS Boat Detection, EOG
+5. NOAA — Cross-matching VMS with VIIRS for IUU detection
 
 ---
 
 *Last updated: 2026-04-21*
-*Data completeness report: DATA_COMPLETENESS_REPORT.md*
-*Phase 1 research plan: docs/PHASE1-RESEARCH-PLAN.md*

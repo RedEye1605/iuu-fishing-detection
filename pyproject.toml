@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "iuu-fishing-detection"
+version = "0.1.0"
+description = "Spatiotemporal Graph Attention Network for IUU fishing detection in Indonesian waters"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Toni"},
+    {name = "Nafi"},
+    {name = "Rhendy"},
+]
+
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "requests>=2.31",
+    "geopandas>=0.14",
+    "shapely>=2.0",
+]
+
+[project.optional-dependencies]
+ml = [
+    "torch>=2.2",
+    "torch_geometric>=2.5",
+    "scikit-learn>=1.4",
+    "matplotlib>=3.8",
+    "seaborn>=0.13",
+]
+viz = [
+    "folium>=0.16",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"

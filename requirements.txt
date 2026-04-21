@@ -1,0 +1,21 @@
+# Legacy requirements.txt - Use pyproject.toml instead
+# Install with: uv pip install -r requirements.txt
+
+geopandas>=0.14.0
+shapely>=2.0.0
+folium>=0.14.0
+requests>=2.31.0
+pyogrio>=0.10.0
+numpy>=1.26.0
+pandas>=2.1.0
+torch>=2.1.0
+torch-geometric>=2.3.0
+scikit-learn>=1.3.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Dev dependencies
+pytest>=7.4.0
+pytest-cov>=4.1.0
+ruff>=0.1.0
+mypy>=1.7.0

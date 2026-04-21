@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Pull GFW SAR presence data for Indonesia EEZ using 4Wings API.
+Using correct parameter format: datasets[0]=...
 """
 
 import json
@@ -35,29 +36,31 @@ def try_eez_based():
     """Try EEZ-based pull using region ID."""
     log_message("Attempting EEZ-based pull with region ID 8371...")
 
-    params = {
-        "dataset": "public-global-sar-presence:latest"
-    }
-
-    payload = {
+    # Construct URL with correct query parameter format
+    base_url = "https://gateway.api.globalfishingwatch.org/v3/4wings/report"
+    query_params = {
+        "datasets[0]": "public-global-sar-presence:latest",
         "date-range": "2020-01-01,2025-04-30",
         "format": "JSON",
         "spatial-resolution": "LOW",
-        "temporal-resolution": "MONTHLY",
+        "temporal-resolution": "MONTHLY"
+    }
+
+    body = {
         "region": {
             "dataset": "public-eez-areas",
-            "id": 8371  # Indonesia EEZ
+            "id": 8371
         }
     }
 
     try:
-        response = requests.post(API_URL, headers=headers, params=params, json=payload, timeout=300)
+        response = requests.post(base_url, headers=headers, params=query_params, json=body, timeout=300)
+        log_message(f"URL: {response.url[:200]}...")
         response.raise_for_status()
 
         data = response.json()
         log_message(f"EEZ-based request succeeded. Status: {response.status_code}")
 
-        # Check if data contains actual results
         if 'entries' in data:
             log_message(f"Received {len(data['entries'])} entries")
         else:
@@ -76,15 +79,16 @@ def try_bbox_based():
     """Try bbox-based pull."""
     log_message("Attempting bbox-based pull...")
 
-    params = {
-        "dataset": "public-global-sar-presence:latest"
-    }
-
-    payload = {
+    base_url = "https://gateway.api.globalfishingwatch.org/v3/4wings/report"
+    query_params = {
+        "datasets[0]": "public-global-sar-presence:latest",
         "date-range": "2020-01-01,2025-04-30",
         "format": "JSON",
         "spatial-resolution": "LOW",
-        "temporal-resolution": "MONTHLY",
+        "temporal-resolution": "MONTHLY"
+    }
+
+    body = {
         "spatial-aggregation": {
             "type": "bbox",
             "geojson": {
@@ -101,7 +105,8 @@ def try_bbox_based():
     }
 
     try:
-        response = requests.post(API_URL, headers=headers, params=params, json=payload, timeout=300)
+        response = requests.post(base_url, headers=headers, params=query_params, json=body, timeout=300)
+        log_message(f"URL: {response.url[:200]}...")
         response.raise_for_status()
 
         data = response.json()
