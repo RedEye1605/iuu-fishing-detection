@@ -1,7 +1,7 @@
 # 🔍 Comprehensive Audit Report — IUU Fishing Detection Pipeline
 
 **Date:** 2026-04-22 (final validation)
-**Scope:** Phase 1–4 data files, code, and architecture
+**Scope:** Phase 1–5 data files, code, and architecture
 
 ---
 
@@ -10,8 +10,8 @@
 | Metric | Value |
 |---|---|
 | **Overall Status** | ✅ PASS |
-| **Pipeline Completeness** | Phases 1–4 complete, validated, reproducible |
-| **Final Dataset** | 512,247 rows × 124 cols (labeled) |
+| **Pipeline Completeness** | Phases 1–5 complete, validated, reproducible |
+| **Final Dataset** | 512,247 rows × 124 cols (labeled) + 14,857 vessel graph |
 | **Critical Issues** | 0 (all 4 resolved) |
 | **Remaining Warnings** | 4 (non-blocking) |
 
@@ -112,13 +112,57 @@ VIIRS enrichment removed due to insufficient signal (5K sample rows, 0.01% match
 ### 3.9 `ports.parquet`
 **Rows:** 30 | **Cols:** 3 | ✅ All checks pass
 
-### 3.10 Cross-File Consistency
+### 3.10 Graph Output Files
+
+#### `vessel_node_features.parquet`
+**Rows:** 14,857 | **Cols:** 55 (54 features + mmsi)
+
+| Check | Finding | Status |
+|---|---|---|
+| MMSI uniqueness | 14,857 unique = 1:1 with events | ✅ |
+| Feature completeness | 54 features across 7 categories | ✅ |
+| Label coverage | vessel_iuu_label: 0 nulls | ✅ |
+| Registry features | ~50% null (expected, matches Phase 3 fill rate) | ⚠️ |
+
+#### `encounter_edges.parquet`
+**Rows:** 46,239 edges
+
+| Check | Finding | Status |
+|---|---|---|
+| Edge count | Matches Phase 1 encounter events | ✅ |
+| Timestamps | Valid UTC timestamps | ✅ |
+| MMSI pairs | All MMSIs exist in node features | ✅ |
+
+#### `colocation_edges.parquet`
+**Rows:** 138,049 unique vessel pairs
+
+| Check | Finding | Status |
+|---|---|---|
+| Grid resolution | 0.1° (~11km) | ✅ |
+| Same-day constraint | Verified | ✅ |
+| MMSI pairs | All MMSIs exist in node features | ✅ |
+
+#### `snapshot_metadata.parquet`
+**Rows:** 283 weekly snapshots
+
+| Check | Finding | Status |
+|---|---|---|
+| Date range | Covers full dataset temporal range | ✅ |
+| Min vessels per snapshot | >0 (41 weeks skipped for <3 vessels) | ✅ |
+| Edge counts | Consistent with encounter + colocation totals | ✅ |
+
+#### `graph_snapshots.pkl`
+Full graph data — gitignored (too large for git). Reconstructible via `python scripts/run_pipeline.py --phase 5`.
+
+### 3.11 Cross-File Consistency
 
 | Check | Finding | Status |
 |---|---|---|
 | MMSI overlap (registry → events) | 1,598/14,857 (10.8%) | ⚠️ Real limitation |
 | MMSI overlap (behavioral → events) | 14,857/14,857 (100%) | ✅ |
 | Event row counts | Consistent 512,247 | ✅ |
+| Graph nodes → Behavioral MMSIs | 14,857/14,857 (100%) | ✅ |
+| Graph edges → Event encounters | 46,239 matches | ✅ |
 
 ---
 
@@ -193,6 +237,13 @@ Phase 3 (Features + Enrichment):
 
 Phase 4 (Labels):
   pipeline/labels.py   ──→ gfw_events_labeled.parquet (124 cols) ← FINAL
+
+Phase 5 (Graph):
+  pipeline/graph.py    ──→ vessel_node_features.parquet (14,857 × 55)
+                    ──→ encounter_edges.parquet (46,239)
+                    ──→ colocation_edges.parquet (138,049)
+                    ──→ snapshot_metadata.parquet (283)
+                    ──→ graph_snapshots.pkl (gitignored)
 ```
 
 ---

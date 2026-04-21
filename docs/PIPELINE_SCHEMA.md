@@ -103,3 +103,44 @@ Pre-clean. Same as fishing_effort_flat with `detections` (i64) instead of `fishi
 
 ### `zenodo_effort_flat.parquet` (707,118 rows × 10 cols)
 Pre-clean. `date` (str), `year` (i64), `month` (i64), `cell_ll_lat` (f64), `cell_ll_lon` (f64), `flag` (str), `geartype` (str), `hours` (f64), `fishing_hours` (f64), `mmsi_present` (i64)
+
+---
+
+## Graph Output Files (Phase 5)
+
+### `vessel_node_features.parquet` (14,857 rows × 55 cols)
+Per-vessel feature matrix for graph neural network. Key: `mmsi` (string, unique).
+
+**Spatial (4):** `mean_lat` (f64), `mean_lon` (f64), `std_lat` (f64), `std_lon` (f64)
+
+**Temporal (3):** `mean_hour` (f64), `nighttime_ratio` (f64), `weekend_ratio` (f64)
+
+**Behavioral (31):** All 31 columns from `vessel_behavioral_features.parquet` (fishing_count, loitering_rate, encounter_rate, spatial_range_km, unique_grid_cells, etc.)
+
+**Registry (4):** `reg_length_m` (f64), `reg_tonnage_gt` (f64), `reg_engine_power_kw` (f64), `reg_vessel_class` (str)
+
+**Risk (5):** `max_iuu_score` (f64), `unauthorized_count` (i64), `encounter_count_ind` (i64), `highseas_count` (i64), `mpa_count` (i64)
+
+**Context (4):** `mean_sar_detections` (f64), `mean_effort_hours` (f64), `mean_distance_shore` (f64), `in_highseas_ratio` (f64)
+
+**Label (1):** `vessel_iuu_label` (int: 0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu)
+
+**Key (1):** `mmsi` (str)
+
+### `encounter_edges.parquet` (46,239 rows)
+Direct vessel-to-vessel encounter edges from transshipment events.
+
+`mmsi_1` (str), `mmsi_2` (str), `timestamp` (ts UTC), plus encounter metadata columns
+
+### `colocation_edges.parquet` (138,049 rows)
+Vessel pairs found in the same 0.1° grid cell on the same day.
+
+`mmsi_1` (str), `mmsi_2` (str), plus temporal/spatial context columns
+
+### `snapshot_metadata.parquet` (283 rows)
+Weekly graph snapshot statistics.
+
+`week_start` (ts), `num_vessels` (int), `num_encounter_edges` (int), `num_colocation_edges` (int), `total_edges` (int)
+
+### `graph_snapshots.pkl`
+Full serialized graph data (edge indices, node feature tensors, temporal mappings). Gitignored — reconstructible via `python scripts/run_pipeline.py --phase 5`.

@@ -1,8 +1,8 @@
 # Data Quality Report
 
 **Date:** 2026-04-22
-**Pipeline Version:** v0.8.0
-**Scope:** All `data/processed/` parquet files
+**Pipeline Version:** v0.9.0
+**Scope:** All `data/processed/` parquet files including graph outputs
 
 ---
 
@@ -10,9 +10,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Total files | 13 parquet files |
+| Total files | 18 parquet files + 1 pickle |
 | Total rows | ~4.5M across all files |
 | Final dataset | 512,247 rows × 124 cols |
+| Graph dataset | 14,857 vessel nodes, 184,188 edges, 283 snapshots |
 | IUU labels | 4 classes (normal 24.8%, suspicious 40.1%, probable_iuu 5.3%, hard_iuu 29.8%) |
 | MMSI type consistency | ✅ `large_string` everywhere |
 | Coordinate validity | ✅ 100% within Indonesia bbox |
@@ -252,7 +253,35 @@ The **50.3% fill rate** reported in the pipeline refers to the percentage of eve
 
 ---
 
-## 8. Known Issues & Mitigations
+## 8. Graph Data Quality
+
+### `vessel_node_features.parquet`
+- **Rows:** 14,857 | **Cols:** 55 (54 features + mmsi)
+- **MMSI:** 14,857 unique, 1:1 with behavioral features ✅
+- **Feature categories:** Spatial (4), Temporal (3), Behavioral (31), Registry (4), Risk (5), Context (4), Label (1)
+- **Label distribution:** normal 15.5%, suspicious 61.7%, probable_iuu 15.9%, hard_iuu 6.9%
+- **Registry nulls:** ~50% (consistent with Phase 3 fill rate) ⚠️
+
+### `encounter_edges.parquet`
+- **Edges:** 46,239 (direct transshipment evidence)
+- **All MMSI pairs present in node features** ✅
+
+### `colocation_edges.parquet`
+- **Edges:** 138,049 unique vessel pairs
+- **Grid:** 0.1° (~11km) same-day proximity
+- **All MMSI pairs present in node features** ✅
+
+### `snapshot_metadata.parquet`
+- **Snapshots:** 283 weekly graphs
+- **Mean vessels/snapshot:** 469, max 3,397
+- **Mean edges/snapshot:** 6,531, max 30,637
+- **Empty snapshots:** 1 (0 edges), 41 weeks skipped (< 3 vessels)
+
+### `graph_snapshots.pkl`
+- Full temporal graph data for ST-GAT training
+- Gitignored (reconstructible via pipeline)
+
+## 9. Known Issues & Mitigations
 
 | Issue | Impact | Mitigation |
 |-------|--------|------------|
@@ -265,7 +294,7 @@ The **50.3% fill rate** reported in the pipeline refers to the percentage of eve
 
 ---
 
-## 9. Data Lineage
+## 10. Data Lineage
 
 ```
 Raw Data → Phase 1 (Load) → Phase 2 (Clean) → Phase 3 (Features) → Final

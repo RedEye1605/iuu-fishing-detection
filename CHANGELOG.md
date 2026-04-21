@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.9.0 - Phase 5: Graph Construction (2026-04-22)
+
+### New Features
+- **`src/data/pipeline/graph.py`** — Vessel-centric graph construction
+- Vessel-level nodes (14,857) instead of event-level (512K) to avoid 244GB adjacency matrix
+- 54 features per vessel: spatial, temporal, behavioral, registry, risk, context, label
+- Two edge types: encounter (46,239) + co-location (138,049) = 184,188 total
+- 283 weekly temporal snapshots for ST-GAT training
+
+### Output
+- `vessel_node_features.parquet`: 14,857 × 55 (54 features + mmsi)
+- `encounter_edges.parquet`: 46,239 edges with timestamps
+- `colocation_edges.parquet`: 138,049 unique vessel pairs
+- `snapshot_metadata.parquet`: 283 weekly snapshot statistics
+- `graph_snapshots.pkl`: Full graph data (gitignored)
+
+### Design Decisions
+- Vessel-centric NOT event-centric (512K nodes → 244GB adjacency = infeasible)
+- No heading data (not available in GFW datasets)
+- No rolling 7-day windows (used pre-computed behavioral features from Phase 3)
+- Co-location uses 0.1° grid (~11km) same-day proximity
+- Weekly snapshots over daily for better graph density
+- 41 weeks skipped (fewer than 3 vessels)
+
+### Vessel Label Distribution
+- normal: 2,303 (15.5%) | suspicious: 9,163 (61.7%)
+- probable_iuu: 2,361 (15.9%) | hard_iuu: 1,030 (6.9%)
+
 ## v0.8.0 - Phase 4: IUU Label Generation (2026-04-22)
 
 ### New Features

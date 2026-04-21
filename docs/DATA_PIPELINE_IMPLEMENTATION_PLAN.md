@@ -3,7 +3,7 @@
 ## IUU Fishing Detection — From Raw Data to Training-Ready
 
 > **Goal:** Transform all raw data sources into a unified, clean, feature-rich dataset ready for ST-GAT model training.
-> **Status:** Phases 1–4 complete and validated (2026-04-22). Phases 5–6 are TODO.
+> **Status:** Phases 1–5 complete and validated (2026-04-22). Phase 6 is TODO.
 > **Output:** `data/processed/` with 13 Parquet files; final: `gfw_events_labeled.parquet` (512K rows, 124 cols)
 
 ---
@@ -314,18 +314,64 @@ Normalized to [0, 1]. Division by 1.9 is the theoretical maximum.
 
 ---
 
-## Phase 5: Graph Construction — TODO
+## Phase 5: Graph Construction ✅ COMPLETE
 
-### Step 5.1: Vessel Trajectory Graph
-- Nodes: vessel-time points with feature vectors
-- Spatial edges: vessels within 20km proximity
-- Temporal edges: same vessel across time snapshots
-- ST-GAT architecture: temporal attention connects snapshots
+**Script:** `src/data/pipeline/graph.py`
 
-### Step 5.2: Graph Feature Matrix
-~25 normalized features per node (spatial, temporal, vessel, behavioral, contextual).
+### ⚠️ Plan Revision: Event-Centric → Vessel-Centric
 
-**Current state:** `src/features/graph_builder.py` exists as placeholder only.
+Original plan used event-level nodes (512K nodes). This would require ~244GB for the adjacency matrix — infeasible. Revised to **vessel-centric** graph: 14,857 nodes with manageable adjacency.
+
+### Step 5.1: Vessel-Centric Graph ✅
+
+**Nodes:** 14,857 vessels × 54 features
+- **Spatial (4):** mean_lat, mean_lon, std_lat, std_lon
+- **Temporal (3):** mean_hour, nighttime_ratio, weekend_ratio
+- **Behavioral (31):** From vessel_behavioral_features (fishing_count, loitering_rate, encounter_rate, etc.)
+- **Registry (4):** reg_length_m, reg_tonnage_gt, reg_engine_power_kw, reg_vessel_class
+- **Risk (5):** max_iuu_score, unauthorized_count, encounter_count_ind, highseas_count, mpa_count
+- **Context (4):** mean_sar_detections, mean_effort_hours, mean_distance_shore, in_highseas_ratio
+- **Label (1):** vessel_iuu_label (0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu)
+- **Key:** mmsi (string)
+
+**Edges:** Two types, 184,188 total across all snapshots
+- **Encounter edges (46,239):** Direct transshipment evidence from encounter events
+- **Co-location edges (138,049):** Vessels in same 0.1° grid cell (~11km) on same day
+
+### Step 5.2: Temporal Snapshots ✅
+
+**283 weekly graph snapshots:**
+- Mean 469 vessels per snapshot, max 3,397
+- Mean 6,531 edges per snapshot, max 30,637
+- Only 1 snapshot has 0 edges
+- 41 weeks skipped (< 3 vessels)
+
+### Output Files
+
+| File | Rows | Cols | Description |
+|------|------|------|-------------|
+| `vessel_node_features.parquet` | 14,857 | 55 | 54 features + mmsi |
+| `encounter_edges.parquet` | 46,239 | — | Encounter edges with timestamps |
+| `colocation_edges.parquet` | 138,049 | — | Co-location vessel pairs |
+| `snapshot_metadata.parquet` | 283 | — | Weekly snapshot statistics |
+| `graph_snapshots.pkl` | — | — | Full graph data (gitignored) |
+
+### Vessel Label Distribution (max across events)
+
+| Label | Count | % |
+|-------|-------|---|
+| normal | 2,303 | 15.5% |
+| suspicious | 9,163 | 61.7% |
+| probable_iuu | 2,361 | 15.9% |
+| hard_iuu | 1,030 | 6.9% |
+
+### Key Design Decisions
+- **Vessel-centric NOT event-centric:** 512K nodes → 244GB adjacency (impossible)
+- **No heading data:** Not available in the dataset
+- **No rolling 7-day windows:** Used pre-computed behavioral features instead
+- **Weather removed:** Already dropped in Phase 3
+- **Co-location threshold:** 0.1° grid (~11km) same-day proximity
+- **Weekly snapshots over daily:** Better graph density per snapshot
 
 ---
 
@@ -362,7 +408,8 @@ src/data/
 │   ├── clean.py              # Phase 2: Dedup, validate, normalize
 │   ├── features.py           # Phase 3a: Vessel profile + behavioral features
 │   ├── enrich.py             # Phase 3b: Cross-source enrichment
-│   └── labels.py             # Phase 4: IUU indicator + label generation
+│   ├── labels.py             # Phase 4: IUU indicator + label generation
+│   └── graph.py              # Phase 5: Graph construction (vessel-centric)
 └── clients/
     └── gfw.py                # GFW API client
 
@@ -383,6 +430,9 @@ scripts/
 | Lambda for unique_grid_cells | Two-stage groupby | Original lambda was buggy |
 | Steps 3.2-3.3 separate | Already done in Phase 2 | Temporal features added during cleaning |
 | 124 columns (audit) | 111 columns (final) | Weather (7) + VIIRS (3) removed in v0.7.0; 3 cols removed during collision fix. Phase 4 adds 13 cols → 124 final |
+| Event-level graph nodes | Vessel-level graph nodes | 512K event nodes → 244GB adjacency; vessel-level (14,857) is feasible |
+| Rolling 7-day windows | Pre-computed behavioral features | Weekly snapshots with behavioral features from Phase 3 |
+| Heading data in graph | Not available | Heading data not present in GFW datasets |
 
 ---
 

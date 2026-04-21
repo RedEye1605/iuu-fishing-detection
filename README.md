@@ -40,12 +40,13 @@ gemastik/
 │   │   │   ├── clean.py              # Phase 2: Dedup, validate, normalize
 │   │   │   ├── features.py           # Phase 3a: Vessel + behavioral features
 │   │   │   └── enrich.py             # Phase 3b: Cross-source enrichment
-│   │   │   └── labels.py             # Phase 4: IUU label generation
+│   │   │   ├── labels.py             # Phase 4: IUU label generation
+│   │   │   └── graph.py              # Phase 5: Graph construction
 │   │   └── clients/                  # API clients
 │   │       ├── gfw.py                # GFW API client (events, SAR, effort)
 │   │       └── __init__.py
 │   ├── features/
-│   │   └── graph_builder.py          # ST-GAT graph construction (Phase 5)
+│   │   └── graph_builder.py          # Legacy graph placeholder (Phase 5 now in pipeline/)
 │   ├── models/
 │   │   └── stgat.py                  # ST-GAT model architecture (Phase 6)
 │   └── utils/
@@ -105,11 +106,12 @@ Zenodo historical effort files are distributed via [GitHub Release](https://gith
 ## 🚀 Running the Pipeline
 
 ```bash
-python scripts/run_pipeline.py              # Run all phases (1-4)
+python scripts/run_pipeline.py              # Run all phases (1-5)
 python scripts/run_pipeline.py --phase 1    # Run only Phase 1
 python scripts/run_pipeline.py --phase 2    # Run only Phase 2
 python scripts/run_pipeline.py --phase 3    # Run only Phase 3
 python scripts/run_pipeline.py --phase 4    # Run only Phase 4
+python scripts/run_pipeline.py --phase 5    # Run only Phase 5
 python scripts/run_pipeline.py --step 4.1   # Run specific step
 ```
 
@@ -166,6 +168,10 @@ Score normalized to [0, 1]; threshold-based label assignment.
 | `sar_presence_clean.parquet` | 742,075 | 18 | Cleaned SAR presence |
 | `zenodo_effort_clean.parquet` | 707,118 | 12 | Cleaned Zenodo effort (spatially filtered) |
 | `ports.parquet` | 30 | 3 | Indonesia port locations |
+| `vessel_node_features.parquet` | 14,857 | 55 | Vessel graph node features |
+| `encounter_edges.parquet` | 46,239 | — | Encounter edges (transshipment) |
+| `colocation_edges.parquet` | 138,049 | — | Co-location edges (same grid/day) |
+| `snapshot_metadata.parquet` | 283 | — | Weekly graph snapshot stats |
 
 ### Feature Categories (111 columns)
 
@@ -214,9 +220,8 @@ Score normalized to [0, 1]; threshold-based label assignment.
 - [x] Documentation updated to match implementation
 
 ### 🔄 Week 3 — Model Development
-- [ ] ST-GAT architecture implementation
-- [ ] Graph construction pipeline
-- [ ] Training & hyperparameter tuning
+- [x] Phase 5: Graph Construction (vessel-centric, 14,857 nodes, 184K edges, 283 weekly snapshots)
+- [ ] Phase 6: ST-GAT architecture implementation & training
 
 ### 📅 Week 4 — Evaluation & Polish
 - [ ] Model evaluation (precision, recall, F1, AUC)
