@@ -57,3 +57,6 @@ test.html
 
 # Pytest cache
 .pytest_cache/
+
+# Graph data outputs
+data/processed/graph_snapshots.pkl
