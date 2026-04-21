@@ -3,32 +3,30 @@
 ## IUU Fishing Detection — From Raw Data to Training-Ready
 
 > **Goal:** Transform all raw data sources into a unified, clean, feature-rich dataset ready for ST-GAT model training.
-> **Timeline:** Week 2 of Gemastik XIX 2026
-> **Output:** `data/processed/` with training-ready Parquet files + graph objects
+> **Status:** Phases 1–3 complete and validated (2026-04-22). Phases 4–6 are TODO.
+> **Output:** `data/processed/` with 14 Parquet files; final: `gfw_events_full.parquet` (512K rows, 121 cols)
 
 ---
 
-## 📊 Data Inventory
+## 📊 Data Inventory (Actual)
 
-### Source Files & Schemas
+### Source Files
 
-| # | Source | File | Records | Format | Key Fields |
-|---|--------|------|---------|--------|------------|
-| 1 | GFW Fishing Events | `gfw/fishing_events_indonesia_2020-2025.json.gz` | 285,226 | JSON array | id, start, end, lat, lon, vessel.mmsi, vessel.geartype, vessel.flag, regions, distances |
-| 2 | GFW Encounters | `gfw/encounters_indonesia_2020-2024.json.gz` | 46,264 | JSON array | id, start, end, lat, lon, vessel (×2), regions |
-| 3 | GFW Loitering | `gfw/loitering_indonesia_2020-2025_corrected.json.gz` | 127,484 | JSON array | id, start, end, lat, lon, vessel, regions, distances |
-| 4 | GFW Port Visits | `gfw/port_visits_indonesia_2020-2025.json.gz` | 53,298 | JSON array | id, start, end, lat, lon, vessel, port.name, regions |
-| 5 | GWR SAR Presence | `gfw/4wings_sar_presence_indonesia_corrected.json.gz` | 1,242,915 | JSON (nested) | mmsi, date, lat, lon, detections, flag, geartype |
-| 6 | GFW Fishing Effort | `gfw/4wings_fishing_effort_indonesia_corrected.json.gz` | 890,411 | JSON (nested) | mmsi, date, lat, lon, hours, flag, geartype |
-| 7 | Zenodo Vessel Registry | `zenodo/fishing-vessels-v3.csv` | ~2M+ | CSV | mmsi, year, flag_ais, vessel_class, length_m, engine_power_kw, tonnage_gt |
-| 8 | Zenodo Monthly Effort | `zenodo/fleet-monthly-csvs-10-v3-{year}.zip` | ~607 MB | CSV (zipped) | mmsi, date, lat, lon, hours, flag, geartype |
-| 9 | EEZ Boundaries | `gis/eez_v12_lowres.gpkg` | Global | GeoPackage | ISO_TER1, geometry (polygons) |
-| 10 | MPA Boundaries | `gis/indonesia_mpa_sample.geojson` | 12 areas | GeoJSON | name, geometry |
-| 11 | BMKG Weather | `bmkg/marine_weather_2024.csv` | 2,921 | CSV | date, zone, lon, lat, wind_speed, wave_height, temp, visibility, precipitation |
-| 12 | VIIRS Detections | `viirs/sample_vbd_detections_2024.csv` | 5,001 | CSV | date_gmt, time_gmt, lon, lat, quality_flag, radiance |
-| 13 | Indonesia Ports | `gfw/osm_indonesia_ports_manual.json` | 30 | JSON | name, lat, lon |
+| # | Source | File | Records | Format |
+|---|--------|------|---------|--------|
+| 1 | GFW Fishing Events | `gfw/fishing_events_indonesia_2020-2025.json.gz` | 285,226 | JSON array |
+| 2 | GFW Encounters | `gfw/encounters_indonesia_2020-2024.json.gz` | 46,264 | JSON array |
+| 3 | GFW Loitering | `gfw/loitering_indonesia_2020-2025_corrected.json.gz` | 127,484 | JSON array |
+| 4 | GFW Port Visits | `gfw/port_visits_indonesia_2020-2025.json.gz` | 53,298 | JSON array |
+| 5 | GFW SAR Presence | `gfw/4wings_sar_presence_indonesia_corrected.json.gz` | 1,242,915 | JSON (nested) |
+| 6 | GFW Fishing Effort | `gfw/4wings_fishing_effort_indonesia_corrected.json.gz` | 890,411 | JSON (nested) |
+| 7 | Zenodo Vessel Registry | `zenodo/fishing-vessels-v3.csv` | ~2M+ | CSV |
+| 8 | Zenodo Monthly Effort | `zenodo/fleet-monthly-csvs-10-v3-{year}.zip` | ~607 MB | CSV (zipped) |
+| 9 | BMKG Weather | `bmkg/marine_weather_2024.csv` | 2,921 | CSV |
+| 10 | VIIRS Detections | `viirs/sample_vbd_detections_2024.csv` | 5,001 | CSV |
+| 11 | Indonesia Ports | `gfw/osm_indonesia_ports_manual.json` | 30 | JSON |
 
-**Total raw records: ~2.6M+**
+**Note:** EEZ shapefiles (`gis/eez_v12_lowres.gpkg`) and MPA boundaries (`gis/indonesia_mpa_sample.geojson`) exist but were **not used** in the pipeline. No spatial join was performed — EEZ/MPA info comes from GFW's `regions` field directly.
 
 ---
 
@@ -41,682 +39,315 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 │ GFW SAR JSON     │──────┤      │ Null handling    │──────┤      │ Spatial Features│
 │ GFW Effort JSON  │──────┼────► │ Type casting     │──────┼────► │ Temporal Features│
 │ Zenodo CSV       │──────┤      │ Coordinate valid.│──────┤      │ Behavioral Flags│
-│ Weather CSV      │──────┤      │ Date normalization│──────┤      │ Graph Features  │
-│ VIIRS CSV        │──────┤      │ Flag standardize │──────┤      │ Labels          │
-│ GIS Shapefiles   │──────┘      │ Outlier removal  │──────┘      │ Enrichment      │
+│ Weather CSV      │──────┤      │ Date normalization│──────┤      │ Cross-source    │
+│ VIIRS CSV        │──────┤      │ Flag standardize │──────┤      │ Enrichment      │
+│ Ports JSON       │──────┘      │ Outlier capping  │──────┘      │                 │
 └─────────────────┘              └─────────────────┘              └─────────────────┘
        ↓                                ↓                                ↓
-  Parquet files                   Cleaned Parquet                 Training Dataset
-  (intermediate)                  (validated)                     (graph + features)
+  *_flat.parquet                 *_clean.parquet              gfw_events_full.parquet
 ```
 
 ---
 
-## Phase 1: Load & Flatten (Day 1) ✅ COMPLETE (2026-04-21)
-
-> **Status:** All 8 Parquet files generated. See `docs/PHASE1_AUDIT_FINDINGS.md` for detailed audit results.
+## Phase 1: Load & Flatten ✅ COMPLETE
 
 ### Step 1.1: GFW Events → Unified Events Table ✅
 
-**Input:** 4 GFW event files (fishing, encounters, loitering, port visits)
-**Output:** `data/processed/gfw_events_flat.parquet`
+**Script:** `src/data/loaders.py`
+**Input:** 4 GFW event JSON.gz files
+**Output:** `data/processed/gfw_events_flat.parquet` (512,272 rows × 54 cols)
 
-```python
-# Target schema for unified events
-gfw_events_flat = pd.DataFrame({
-    "event_id": str,          # Unique event ID
-    "event_type": str,        # fishing | encounter | loitering | port_visit
-    "start_time": datetime64,
-    "end_time": datetime64,
-    "duration_hours": float,
-    "lat": float,
-    "lon": float,
-    "bbox_minlon": float,
-    "bbox_minlat": float,
-    "bbox_maxlon": float,
-    "bbox_maxlat": float,
-    "mmsi": str,              # Primary vessel
-    "mmsi_2": str,            # Secondary vessel (encounters only)
-    "vessel_name": str,
-    "vessel_flag": str,
-    "vessel_geartype": str,
-    "vessel_length": float,
-    "vessel_tonnage": float,
-    "eez_id": str,
-    "in_mpa": bool,
-    "mpa_ids": list[str],
-    "in_highseas": bool,
-    "fao_zone": str,
-    "rfmo": list[str],
-    "distance_shore_km": float,
-    "distance_port_km": float,
-    "port_name": str,          # Port visits only
-})
-```
+**Key implementation details:**
+- `vessel.ssvid` is the MMSI field in GFW data (not `vessel.mmsi`)
+- Encounter events have 2 vessels: primary in `vessel`, secondary in `encounter.vessel` → mapped to `mmsi` + `mmsi_2`
+- EEZ/MPA/RFMO/FAO data extracted from GFW `regions` field (no shapefile join needed)
+- `potential_risk` and `authorization_status` captured from GFW's `publicAuthorizations` fields
+- Event-type specific fields (port_name, encounter_median_speed, loitering_total_hours, etc.) are null for other event types — expected
 
-**Actions:**
-- Parse each JSON.gz file
-- Flatten nested `position`, `regions`, `distances`, `vessel` dicts
-- Handle encounters (2 vessels per event → `mmsi` + `mmsi_2`)
-- Extract EEZ code, check `regions.eez` for Indonesia code `8492`
-- Concatenate all 4 event types with `event_type` label
-- Save as Parquet with Snappy compression
+**Actual schema:** See `docs/PIPELINE_SCHEMA.md` → `gfw_events_flat.parquet`
 
-### Step 1.2: GFW SAR & Effort → Grid Tables
+**Validation:**
+- 512,272 events across 4 types
+- MMSI: `large_string` type ✅
+- All timestamps: `datetime64[ns, UTC]` ✅
 
+### Step 1.2: GFW SAR & Effort → Grid Tables ✅
+
+**Script:** `src/data/loaders_sar_effort.py`
 **Input:** SAR presence JSON, fishing effort JSON
-**Output:** `data/processed/sar_presence_flat.parquet`, `data/processed/fishing_effort_flat.parquet`
+**Output:**
+- `sar_presence_flat.parquet` (1,242,915 rows × 13 cols) — includes ~40% grid-only rows (no MMSI)
+- `fishing_effort_flat.parquet` (890,411 rows × 13 cols)
 
-```python
-# SAR schema
-sar_flat = pd.DataFrame({
-    "mmsi": str,
-    "date": str,              # "2020-08" monthly
-    "lat": float,
-    "lon": float,
-    "detections": int,
-    "flag": str,
-    "geartype": str,
-    "entry_timestamp": datetime64,
-    "exit_timestamp": datetime64,
-})
+**Key implementation details:**
+- SAR data has ~40% rows with no MMSI (grid-level detections only) — these are dropped in Phase 2
+- Both use `vessel.ssvid` → `mmsi` mapping
+- `detections` (int64) for SAR, `fishing_hours` (double) for effort
 
-# Effort schema
-effort_flat = pd.DataFrame({
-    "mmsi": str,
-    "date": str,              # "2020-12" monthly
-    "lat": float,
-    "lon": float,
-    "fishing_hours": float,
-    "flag": str,
-    "geartype": str,
-    "vessel_name": str,
-})
-```
+### Step 1.3: Zenodo Vessel Registry ✅
 
-**Actions:**
-- Parse nested JSON structure (metadata + entries → array of records)
-- Extract from `public-global-sar-presence:v4.0` and `public-global-fishing-effort:v4.0` sub-objects
-- Flatten to one row per (mmsi, date, lat, lon) observation
+**Script:** `src/data/loaders_aux.py`
+**Input:** `zenodo/fishing-vessels-v3.csv`
+**Output:** `vessel_registry.parquet` (147,924 rows × 12 cols)
 
-### Step 1.3: Zenodo Vessel Registry
+**Key implementation details:**
+- MMSI explicitly cast to `string` at load time (was int64 in CSV)
+- Filtered to relevant flags (IDN + neighboring countries)
+- All 12 columns: mmsi (str), year, flag_ais, flag_registry, flag_gfw, vessel_class, length_m, engine_power_kw, tonnage_gt, self_reported_fishing_vessel, active_hours, fishing_hours
 
-**Input:** `fishing-vessels-v3.csv`
-**Output:** `data/processed/vessel_registry.parquet`
+### Step 1.4: Zenodo Monthly Effort ✅
 
-```python
-vessel_registry = pd.DataFrame({
-    "mmsi": str,
-    "year": int,
-    "flag_ais": str,
-    "flag_registry": str,
-    "flag_gfw": str,
-    "vessel_class": str,        # Best available (inferred > gfw > registry)
-    "length_m": float,          # Best available
-    "engine_power_kw": float,
-    "tonnage_gt": float,
-    "self_reported_fishing": bool,
-})
-```
-
-**Actions:**
-- Read CSV (110MB, ~2M+ rows)
-- Filter to vessels that appear in Indonesian waters (flag contains IDN, OR appear in GFW events with Indonesian EEZ)
-- Resolve multiple flag/class sources: prioritize `inferred` > `gfw` > `registry`
-- Keep latest year record per MMSI as the "current" vessel profile
-
-### Step 1.4: Zenodo Monthly Effort
-
+**Script:** `src/data/loaders_aux.py`
 **Input:** 5 zip files (2020–2024)
-**Output:** `data/processed/zenodo_effort_flat.parquet`
+**Output:** `zenodo_effort_flat.parquet` (707,118 rows × 10 cols)
 
-**Actions:**
-- Extract CSV from each zip
-- Filter to Indonesia-related records (flag=IDN or coordinates in Indonesian EEZ)
-- Concatenate all years
-- Schema matches GFW effort (mmsi, date, lat, lon, hours, flag, geartype)
+**Key implementation details:**
+- **Spatially filtered** to Indonesia bbox (lat -11.5 to 6.5, lon 95 to 141.5) during load — NOT flag-only filter
+- Original global data was ~30M rows; spatial filter reduced to 707K
+- Grid-level data: `mmsi_present` (int64 count) but no individual MMSI identifiers
 
-### Step 1.5: Weather, VIIRS, GIS, Ports
+**Difference from original plan:** Plan said "filter to Indonesia-related records (flag=IDN or coordinates in Indonesian EEZ)". Actual implementation filters by bbox only, which is more correct — captures foreign vessels in Indonesian waters.
 
-**Input:** Various CSV/GeoJSON files
-**Output:** Individual Parquet/GeoParquet files
+### Step 1.5: Weather, VIIRS, Ports ✅
 
-```python
-# Weather → data/processed/weather.parquet
-# Already clean CSV, just type-cast and parse dates
+**Script:** `src/data/loaders_aux.py`
+**Output:**
+- `weather.parquet` (2,920 rows × 9 cols) — lat/lon are int64 (zone centers)
+- `viirs_detections.parquet` (5,000 rows × 8 cols) — `date_gmt` is int64 (parsed later)
+- `ports.parquet` (30 rows × 3 cols)
 
-# VIIRS → data/processed/viirs_detections.parquet
-# Already clean CSV, parse dates, validate coordinates
-
-# Ports → data/processed/ports.parquet
-# 30 ports, simple lat/lon/name
-
-# EEZ → load GeoPackage, filter ISO_TER1=="IDN", save as GeoParquet
-# MPA → load GeoJSON, save as GeoParquet
-```
+**Validation:** All files load cleanly, types match schema.
 
 ---
 
-## Phase 2: Clean & Validate (Day 2) ✅ COMPLETE (2026-04-21)
+## Phase 2: Clean & Validate ✅ COMPLETE
 
-### Step 2.1: Deduplication
+### Step 2.1: Deduplication ✅
 
-| Dataset | Strategy |
-|---------|----------|
-| GFW Events | Dedup on `event_id` (unique) |
-| SAR Presence | Dedup on `(mmsi, date, lat, lon)` |
-| Fishing Effort | Dedup on `(mmsi, date, lat, lon)`, sum `hours` if duplicate |
-| Vessel Registry | Keep latest year per MMSI |
-| Zenodo Effort | Dedup on `(mmsi, date, lat, lon)`, sum `hours` |
+**Script:** `src/data/step_2_1_dedup.py`
 
-### Step 2.2: Null Handling
+| Dataset | Input | Output | Duplicates |
+|---------|-------|--------|------------|
+| GFW Events | 512,272 | 512,247 | 25 event_id dupes |
+| SAR Presence | 1,242,915 | 742,075 | ~500K grid-only (no MMSI) + 432 dupes |
+| Fishing Effort | 890,411 | 885,649 | 4,762 dupes (hours summed) |
+| Zenodo Effort | 707,118 | 707,118 | 0 dupes (spatially filtered) |
+| Vessel Registry | 147,924 | 147,924 | 0 dupes |
 
-| Field | Strategy |
-|-------|----------|
-| `mmsi` | **DROP rows without MMSI** — cannot track vessels without ID |
-| `lat/lon` | **DROP rows** — cannot do spatial analysis without coordinates |
-| `vessel_flag` | Fill from vessel registry (Zenodo) if available, else "UNKNOWN" |
-| `vessel_geartype` | Fill from vessel registry, else "UNKNOWN" |
-| `vessel_length/tonnage` | Fill with median by `geartype` |
-| `distance_shore/port` | Recalculate from coordinates if missing |
-| `eez_id` | Spatial join with EEZ shapefile |
-| `fishing_hours` | Fill 0 for non-fishing events |
+**Key:** SAR grid-only rows (40%, no MMSI) dropped — cannot track vessels without ID.
 
-### Step 2.3: Coordinate Validation
+### Steps 2.2–2.6: Clean & Validate GFW Events ✅
 
-```python
-# Indonesia bounding box (generous)
-LAT_RANGE = (-11.5, 6.5)    # Sumatra tip to Sulawesi north
-LON_RANGE = (95.0, 141.5)   # Aceh to Papua
+**Script:** `src/data/step_2_2_clean.py`
+**Output:** `gfw_events_clean.parquet` (512,247 rows × 66 cols)
 
-# Filter rules:
-# 1. lat must be in [-90, 90], lon in [-180, 180]
-# 2. Keep events within OR near Indonesian EEZ (buffer 50km)
-# 3. Flag events on land (distance_to_shore == 0 AND not port_visit) as suspicious
-```
+**Actions performed:**
+- Filled 58,097 missing vessel flags from registry
+- Coordinate validation: all within Indonesia bbox (±2° buffer)
+- Duration capping: 673 fishing @72h, 1,025 loitering @168h, 2,564 encounters @48h
+- 0 speed outliers (>30 knots)
+- Flag standardization via `FLAG_MAP` (constants.py) — ISO 3166 alpha-3
+- Added: `is_domestic`, `is_foreign`, `in_indonesia_bbox`, `hour_of_day`, `day_of_week`, `month`, `year`, `is_nighttime`, `is_weekend`, `season`, `duration_hours`, `implied_speed_knots`, `speed_outlier`
 
-### Step 2.4: Date Normalization
+### Step 2.7: Clean SAR/Effort/Zenodo ✅
 
-```python
-# All timestamps → UTC datetime
-# SAR/Effort dates are monthly strings "2020-08" → first day of month
-# Event timestamps are ISO 8601 → parse directly
-# Add derived columns:
-#   - hour_of_day (0-23)
-#   - day_of_week (0-6)
-#   - month (1-12)
-#   - year
-#   - is_nighttime (based on local hour ~18:00-06:00 WIB)
-```
+**Script:** `src/data/step_2_7_clean_rest.py`
+**Output:**
+- `sar_presence_clean.parquet` (742,075 rows × 18 cols)
+- `fishing_effort_clean.parquet` (885,649 rows × 18 cols)
+- `zenodo_effort_clean.parquet` (707,118 rows × 12 cols)
 
-### Step 2.5: Flag Standardization
-
-```python
-# Normalize country flags to ISO 3166-1 alpha-3
-# Common mappings:
-FLAG_MAP = {
-    "IDN": "IDN", "INA": "IDN",        # Indonesia
-    "CHN": "CHN", "CHINA": "CHN",      # China
-    "TWN": "TWN", "ROC": "TWN",        # Taiwan
-    "VNM": "VNM", "VIETNAM": "VNM",    # Vietnam
-    "MYS": "MYS", "MALAYSIA": "MYS",   # Malaysia
-    "PHL": "PHL", "PNG": "PNG",        # Philippines, PNG
-    "THA": "THA", "KOR": "KOR",        # Thailand, South Korea
-}
-
-# Add column: is_domestic (flag == "IDN")
-# Add column: is_foreign (flag != "IDN")
-```
-
-### Step 2.6: Outlier Removal
-
-| Check | Rule | Action |
-|-------|------|--------|
-| Duration outliers | Events > 72 hours (fishing), > 168 hours (loitering) | Cap at 99th percentile |
-| Speed outliers | implied speed > 30 knots (from event distance/duration) | Flag, don't remove |
-| Coordinate outliers | Outside Indonesian EEZ + 100km buffer | Remove |
-| Duplicate vessels | Same MMSI, same timestamp, different positions | Keep most recent |
-| Unrealistic tonnage | vessel tonnage > 100,000 GT | Flag, investigate |
-
-### Step 2.7: Spatial Validation
-
-```python
-# For each event:
-# 1. Verify EEZ assignment via spatial join with eez_v12_lowres.gpkg
-# 2. Check MPA membership via spatial join with MPA polygons
-# 3. Recalculate distance_to_shore if missing or suspicious
-# 4. Add nearest port (from ports table)
-# 5. Add sea zone name (Java Sea, Celebes Sea, etc.)
-```
-
-**Output:** `data/processed/gfw_events_clean.parquet`
+**Actions performed:** Flag standardization, date parsing, temporal features (year, month, season), is_domestic flag. Memory-efficient chunked ParquetWriter for Zenodo.
 
 ---
 
-## Phase 3: Feature Engineering (Day 3–4) ✅ COMPLETE (2026-04-21)
+## Phase 3: Feature Engineering ✅ COMPLETE
 
-### Step 3.1: Vessel Profile Features
+### Step 3.1: Vessel Profile + Spatial Features ✅
 
-Join events with vessel registry on `mmsi`:
+**Script:** `src/data/step_3_1_vessel_features.py`
 
-```python
-vessel_features = {
-    "vessel_length_m": float,        # From registry
-    "vessel_tonnage_gt": float,
-    "vessel_engine_kw": float,
-    "vessel_class": str,             # trawler, purse_seine, longline, etc.
-    "is_fishing_vessel": bool,
-    "vessel_age_years": int,         # Current year - build year (if available)
-    "size_category": str,            # small (<12m), medium (12-24m), large (>24m)
-    "tonnage_per_length": float,     # Density proxy
-}
-```
+**Actions performed:**
+- Registry join on `mmsi` (string): 1,598/14,857 MMSIs matched (50.3% fill rate)
+- Added: `reg_vessel_class`, `reg_length_m`, `reg_engine_power_kw`, `reg_tonnage_gt`, `reg_flag_ais`, `is_fishing_vessel`, `size_category`, `tonnage_per_length`
+- Duration category: short (<2h), medium (2-8h), long (>8h) — cast to string (not Categorical)
+- Grid cell: 0.1° resolution (~11km) for spatial aggregation
+- Nearest port: computed from 30 Indonesian ports (vectorized)
+- Sea zone: vectorized with `np.select()` (Java Sea, Malacca Strait, Celebes Sea, etc.)
 
-### Step 3.2: Spatial Features
+**Registry fill rate:** 50.3% — this is the real data. Many fishing vessels in Indonesian waters (especially foreign) are not in the Zenodo registry.
 
-```python
-spatial_features = {
-    # Location context
-    "lat": float,
-    "lon": float,
-    "in_indonesian_eez": bool,
-    "in_mpa": bool,
-    "mpa_name": str,                 # Which MPA
-    "distance_to_shore_km": float,
-    "distance_to_port_km": float,
-    "nearest_port_name": str,
-    "sea_zone": str,                 # Java Sea, Celebes Sea, etc.
-    "fao_zone": str,
-    
-    # Risk zones
-    "in_high_risk_area": bool,       # Known IUU hotspots
-    "near_border": bool,             # Within 20km of EEZ boundary
-    "near_mpa_boundary": bool,       # Within 5km of MPA edge
-    
-    # Grid cell (0.1° ≈ 11km resolution for aggregation)
-    "grid_lat": float,               # Rounded to 0.1°
-    "grid_lon": float,
-}
-```
+### Step 3.4: Per-Vessel Behavioral Features ✅
 
-### Step 3.3: Temporal Features
+**Script:** `src/data/step_3_4_behavioral.py`
+**Output:** `vessel_behavioral_features.parquet` (14,857 rows × 32 cols)
 
-```python
-temporal_features = {
-    "timestamp": datetime64,
-    "hour_of_day": int,              # 0-23
-    "day_of_week": int,              # 0-6
-    "month": int,                    # 1-12
-    "year": int,
-    "is_nighttime": bool,            # 18:00-06:00 local
-    "is_weekend": bool,
-    "season": str,                   # wet (Nov-Mar), dry (Apr-Oct)
-    "duration_hours": float,
-    "duration_category": str,        # short (<2h), medium (2-8h), long (>8h)
-}
-```
+**Actions performed:**
+- Per-vessel aggregation: total events, fishing/encounter/loitering/port counts
+- Spatial range (max distance between any two events)
+- Unique grid cells via two-stage groupby (dedup grid → count per vessel)
+- Speed statistics, encounter/loitering rates, port visit patterns
+- Key: `mmsi` (string), 1:1 with unique vessels
 
-### Step 3.4: Behavioral Features (per vessel)
+**Note:** Step numbering jumps from 3.1 to 3.4 because temporal features (3.2/3.3) were already added in Phase 2 (step_2_2_clean.py).
 
-```python
-# Compute per-vessel behavioral profile (rolling windows)
-behavioral_features = {
-    "mmsi": str,
-    
-    # Fishing patterns
-    "avg_fishing_hours_per_trip": float,
-    "total_fishing_days_30d": int,
-    "total_fishing_hours_30d": float,
-    "fishing_frequency_7d": int,       # How many fishing events in last 7 days
-    
-    # Spatial patterns
-    "avg_distance_from_shore": float,
-    "max_distance_from_shore": float,
-    "spatial_range_km": float,         # Max distance between any two events
-    "unique_grid_cells_30d": int,      # How many different areas fished
-    
-    # Port behavior
-    "port_visits_30d": int,
-    "avg_time_in_port_hours": float,
-    "time_since_last_port": float,     # Hours since last port visit
-    
-    # Encounter patterns
-    "encounters_30d": int,
-    "encounters_with_foreign_30d": int,
-    
-    # Loitering patterns
-    "loitering_events_30d": int,
-    "total_loitering_hours_30d": float,
-    
-    # AIS gaps (potential transponder off)
-    "ais_gap_events_30d": int,         # Periods with no AIS data
-    "longest_ais_gap_hours": float,
-    
-    # Route complexity
-    "avg_speed_knots": float,
-    "speed_variance": float,           # High variance = erratic behavior
-    "heading_changes_per_hour": float, # Frequent heading changes
-}
-```
+### Step 3.5: Cross-Source Enrichment ✅
 
-### Step 3.5: Cross-Source Enrichment
+**Script:** `src/data/step_3_5_enrichment.py`
+**Output:** `gfw_events_full.parquet` (512,247 rows × 121 cols, 80.7 MB)
 
-```python
-# For each GFW event, enrich with:
+**Actions performed:**
+- **Weather:** Enriched via zone-based matching (all 8 weather zones). Weather columns prefixed `weather_`: lon, lat, wind_speed_knots, wave_height_m, sea_surface_temp_c, visibility_km, precipitation_mm
+- **VIIRS:** Date-corrected join (`pd.to_datetime(str, format="%Y%m%d")`). Low match rate — VIIRS is sample data (5K rows, 2024 only)
+- **SAR density:** Grid-cell/monthly detection counts → `sar_total_detections`, `sar_unique_vessels`
+- **Fishing effort density:** Grid-cell/monthly fishing hours → `effort_hours_in_cell`, `effort_vessels_in_cell`
+- **Behavioral features:** Merged per vessel from step 3.4
+- **Column collisions eliminated:** No `_x/_y` suffixes in final output
 
-# 1. Weather at event location/time
-weather_enrichment = {
-    "wind_speed_knots": float,
-    "wave_height_m": float,
-    "sea_surface_temp": float,
-    "visibility_km": float,
-    "precipitation_mm": float,
-}
-# Strategy: Nearest-neighbor join on (date, nearest grid cell)
-
-# 2. VIIRS detection proximity
-viirs_enrichment = {
-    "viirs_detection_within_24h": bool,    # Any VIIRS detection within 24h & 10km
-    "viirs_detection_count_nearby": int,    # Count within 48h & 20km
-    "viirs_avg_radiance_nearby": float,
-}
-# Strategy: Spatial-temporal join (event lat/lon ± 0.1°, event date ± 1 day)
-
-# 3. SAR presence in same grid cell
-sar_enrichment = {
-    "sar_detections_same_cell_month": int,
-    "sar_vessels_same_cell_month": int,    # Unique MMSI count
-}
-# Strategy: Match on (grid_lat, grid_lon, month)
-
-# 4. Fishing effort density in area
-effort_enrichment = {
-    "effort_hours_same_cell_month": float,  # Total fishing hours in this grid cell/month
-    "effort_vessels_same_cell_month": int,  # Unique vessels fishing here
-    "effort_density_percentile": float,     # Where does this cell rank
-}
-```
+**Difference from original plan:** Plan described weather as "nearest-neighbor join on (date, nearest grid cell)". Actual uses zone-based monthly averages (8 zones × 365 days). VIIRS date parsing was fixed from broken int64 comparison to proper `pd.to_datetime()` conversion.
 
 ---
 
-## Phase 4: Label Generation (Day 4)
+## Final Dataset Summary
+
+### `gfw_events_full.parquet` — 512,247 rows × 121 cols
+
+| Category | Columns | Count |
+|----------|---------|-------|
+| Core (id, type, time, coords) | event_id through duration_hours | ~12 |
+| Event-type specific | port_name, encounter_*, loitering_* | ~20 |
+| Temporal | hour_of_day, day_of_week, month, year, season, etc. | ~8 |
+| Flag/Domestic | is_domestic, is_foreign | 2 |
+| Speed | avg_speed_knots, implied_speed_knots, speed_outlier | 3 |
+| Registry | reg_vessel_class through tonnage_per_length | ~9 |
+| Spatial | grid_lat, grid_lon, sea_zone, nearest_port_* | ~6 |
+| Weather | weather_lon through weather_precipitation_mm | 7 |
+| VIIRS | viirs_count, viirs_avg_radiance, viirs_detection_nearby | 3 |
+| SAR/Effort density | sar_total_detections, effort_hours_in_cell | 4 |
+| Behavioral | total_events through avg_fishing_hours_per_trip | ~32 |
+
+### Validation Results (2026-04-22)
+- ✅ 100% coordinates within Indonesia bbox
+- ✅ 0 duplicate event_ids
+- ✅ MMSI `large_string` type consistent across all files
+- ✅ 82/121 columns have 0% null
+- ✅ 28 columns >50% null (event-type specific — expected)
+- ✅ 0 column name collisions (_x/_y eliminated)
+- ✅ No `__index_level_0__` index leak
+
+### Class Distribution
+| Event Type | Count | % |
+|-----------|-------|---|
+| Fishing | ~287K | 56% |
+| Loitering | ~128K | 25% |
+| Port Visit | ~51K | 10% |
+| Encounter | ~46K | 9% |
+
+### Flag Distribution
+- Domestic (IDN): 47%
+- Foreign: 53%
+- `potential_risk`: 0.4% True (very imbalanced — needs SMOTE/weighted loss)
+
+### ML Encoding Needed
+- 27 `large_string` columns → label/one-hot encoding
+- 8 `object` (list) columns → multi-hot or drop (eez_ids, mpa_ids, rfmo, fao_zones, authorized_rfmos)
+- bool columns → int (0/1)
+
+---
+
+## Phase 4: Label Generation — TODO
+
+Not yet implemented. Original plan:
 
 ### Step 4.1: IUU Label Definition
+Multi-signal IUU scoring:
+- **Tier 1 (Hard IUU):** Fishing in MPA, foreign vessel in EEZ, AIS gap + SAR detection
+- **Tier 2 (Probable IUU):** Encounter at sea + transshipment, repeated AIS gaps, unregistered vessel
+- **Tier 3 (Suspicious):** Nighttime fishing + near border, unusual patterns
 
-This is the **most critical step** — defining what constitutes IUU fishing.
+### Step 4.2: SAR-AIS Cross-Matching
+Detect "dark vessels" by comparing SAR detections against AIS data within ±6h and ±5km.
 
-```python
-# IUU scoring approach (multi-signal)
-iuu_indicators = {
-    # Direct IUU signals (high confidence)
-    "fishing_in_mpa": bool,                # Fishing event inside Marine Protected Area
-    "fishing_without_license": bool,        # Foreign vessel in Indonesian EEZ (no bilateral agreement)
-    "transponder_off_during_fishing": bool,  # AIS gap detected near fishing activity
-    "encounter_at_sea": bool,               # Met another vessel at sea (potential transshipment)
-    "loitering_near_fishing_ground": bool,   # Loitering behavior near known fishing areas
-    
-    # Indirect IUU signals (medium confidence)
-    "nighttime_fishing": bool,              # Fishing primarily at night
-    "near_border_fishing": bool,            # Fishing near EEZ boundary
-    "repeated_ais_gaps": bool,              # Multiple AIS gaps in short period
-    "unregistered_vessel": bool,            # MMSI not in any vessel registry
-    "flag_mismatch": bool,                  # AIS flag differs from registry flag
-    
-    # Behavioral anomalies (lower confidence)
-    "unusual_fishing_hours": bool,          # Far more/less hours than typical for gear type
-    "unusual_location": bool,               # Fishing in atypical area for vessel type
-    "rapid_port_entry_exit": bool,          # Quick port visits (smuggling indicator)
-}
-```
-
-### Step 4.2: Label Assignment Strategy
-
-```
-┌─────────────────────────────────────────────────────┐
-│              IUU Label Assignment                    │
-│                                                      │
-│  Tier 1 (Hard IUU):                                  │
-│  - Fishing inside MPA                                │
-│  - Foreign vessel fishing in EEZ                     │
-│  - AIS gap + SAR detection (transponder off)         │
-│  → Label: IUU = 1                                    │
-│                                                      │
-│  Tier 2 (Probable IUU):                              │
-│  - Encounter at sea + transshipment pattern           │
-│  - Repeated AIS gaps + loitering                      │
-│  - Unregistered vessel                               │
-│  → Label: IUU = 1 (if 2+ indicators)                 │
-│                                                      │
-│  Tier 3 (Suspicious):                                │
-│  - Nighttime fishing + near border                    │
-│  - Unusual patterns for vessel type                   │
-│  → Label: IUU = 0.5 (soft label / anomaly score)     │
-│                                                      │
-│  Normal:                                              │
-│  - Registered domestic vessel                        │
-│  - Fishing in permitted areas                        │
-│  - Consistent AIS transmission                       │
-│  → Label: IUU = 0                                    │
-│                                                      │
-└─────────────────────────────────────────────────────┘
-```
-
-### Step 4.3: SAR-AIS Cross-Matching (Key IUU Detection Signal)
-
-```python
-"""
-SAR detects vessels by satellite — including those with AIS turned off.
-If SAR detects a vessel at a location/time but NO AIS data exists nearby,
-this is a strong IUU signal (transponder deliberately disabled).
-
-Algorithm:
-1. For each SAR detection (lat, lon, date):
-   a. Search AIS events within ±6 hours and ±5km
-   b. If NO AIS match found → "dark vessel" detection
-   c. Count dark vessel detections per grid cell/month
-2. For each AIS-equipped vessel:
-   a. Check if SAR detected OTHER vessels nearby during their fishing events
-   b. This indicates potential illegal transshipment or buddy boats
-"""
-```
+**Blocker:** `potential_risk` flag is only 0.4% True — class imbalance will be severe. May need anomaly detection approach instead of supervised classification.
 
 ---
 
-## Phase 5: Graph Construction (Day 5)
+## Phase 5: Graph Construction — TODO
 
 ### Step 5.1: Vessel Trajectory Graph
-
-```python
-"""
-Graph structure for ST-GAT:
-
-NODES: Vessel-time points
-  - Each vessel observation (event or track point) is a node
-  - Node features: [lat, lon, speed, heading, vessel_features, behavioral_features]
-
-EDGES: Two types
-  1. Spatial edges: Connect vessels within proximity_threshold (e.g., 20km)
-     - Edge features: distance_km, relative_bearing
-  2. Temporal edges: Connect same vessel across time
-     - Edge features: time_delta_hours, distance_traveled_km
-
-TEMPORAL SNAPSHOTS:
-  - Divide data into time windows (e.g., 6-hour or daily snapshots)
-  - Each snapshot is a separate graph
-  - Temporal attention connects snapshots
-"""
-```
+- Nodes: vessel-time points with feature vectors
+- Spatial edges: vessels within 20km proximity
+- Temporal edges: same vessel across time snapshots
+- ST-GAT architecture: temporal attention connects snapshots
 
 ### Step 5.2: Graph Feature Matrix
+~25 normalized features per node (spatial, temporal, vessel, behavioral, contextual).
 
-```python
-# Node feature matrix (per vessel-time point)
-node_features = [
-    # Normalized spatial (0-1)
-    "lat_norm", "lon_norm",
-    
-    # Temporal (cyclical encoding)
-    "hour_sin", "hour_cos",       # sin/cos of hour for cyclical
-    "month_sin", "month_cos",
-    
-    # Vessel characteristics (normalized)
-    "length_norm", "tonnage_norm", "engine_norm",
-    "is_domestic",
-    "geartype_encoded",           # One-hot or label encoded
-    
-    # Behavioral (normalized)
-    "fishing_hours_7d_norm",
-    "port_visits_7d_norm",
-    "encounters_7d_norm",
-    "loitering_7d_norm",
-    "distance_shore_norm",
-    "speed_norm",
-    
-    # Contextual
-    "in_mpa", "in_high_risk",
-    "weather_conditions_norm",
-    "sar_detections_nearby_norm",
-    
-    # Label
-    "iuu_label",                  # 0, 0.5, or 1
-]
+**Current state:** `src/features/graph_builder.py` exists as placeholder only.
+
+---
+
+## Phase 6: Dataset Split & Export — TODO
+
+### Step 6.1: Temporal Train/Val/Test Split
+- Train: 2020–2023 (80%)
+- Val: 2024-H1 (10%)
+- Test: 2024-H2 to 2025 (10%)
+- Stratified by IUU label, vessel flag, event type
+
+---
+
+## ⚠️ Known Limitations
+
+| Issue | Impact | Mitigation |
+|-------|--------|------------|
+| Registry fill rate 50.3% | Missing vessel characteristics for ~half of vessels | Use SAR cross-matching as alternative signal |
+| Weather data only 2024 | Historical events lack weather enrichment | Use Open-Meteo historical API for backfill |
+| VIIRS is sample data (5K) | Limited VIIRS enrichment, low match rate | Focus on SAR + AIS as primary signals |
+| No EEZ/MPA spatial join | Uses GFW's region fields instead of shapefile join | GFW regions data is reliable for Indonesia |
+| `potential_risk` only 0.4% | Severe class imbalance for supervised learning | Consider anomaly detection or semi-supervised approach |
+| 30 ports only | Limited nearest-port coverage for all of Indonesia | Add more ports from OSM/GFW |
+| Zenodo 2021 zip was corrupted | Had to re-download | Fixed, data verified |
+
+---
+
+## 🔧 Implementation Scripts (Actual)
+
+```
+src/data/
+├── constants.py              # Shared: FLAG_MAP, INDONESIA_BBOX, paths, filenames
+├── loaders.py                # Step 1.1: GFW Events → gfw_events_flat.parquet
+├── loaders_sar_effort.py     # Step 1.2: SAR + Effort → 2 parquets
+├── loaders_aux.py            # Steps 1.3-1.5: Registry, Zenodo, Weather, VIIRS, Ports
+├── step_2_1_dedup.py         # Step 2.1: Deduplication
+├── step_2_2_clean.py         # Steps 2.2-2.6: Clean & validate events
+├── step_2_7_clean_rest.py    # Step 2.7: Clean SAR/Effort/Zenodo
+├── step_3_1_vessel_features.py  # Step 3.1: Vessel profile + spatial features
+├── step_3_4_behavioral.py    # Step 3.4: Per-vessel behavioral features
+└── step_3_5_enrichment.py    # Step 3.5: Cross-source enrichment
+
+scripts/
+└── run_pipeline.py           # Master runner: --phase/--step args
 ```
 
 ---
 
-## Phase 6: Dataset Split & Export (Day 5)
+## Deviations from Original Plan
 
-### Step 6.1: Train/Val/Test Split
-
-```
-Temporal split (no data leakage):
-├── Train: 2020-01 to 2023-12   (80%)
-├── Val:   2024-01 to 2024-06  (10%)
-└── Test:  2024-07 to 2025-03  (10%)
-
-Stratified by:
-- IUU label ratio (maintain class balance)
-- Vessel flag (domestic vs foreign)
-- Event type (fishing, loitering, encounter)
-```
-
-### Step 6.2: Output Files
-
-```
-data/processed/
-├── gfw_events_flat.parquet          # Phase 1: Raw flattened
-├── gfw_events_clean.parquet         # Phase 2: Cleaned & validated
-├── vessel_registry_clean.parquet    # Phase 2: Cleaned vessel data
-├── sar_presence_flat.parquet        # Phase 1: Flattened SAR
-├── fishing_effort_flat.parquet      # Phase 1: Flattened effort
-├── zenodo_effort_flat.parquet       # Phase 1: Zenodo effort
-├── weather_clean.parquet            # Phase 2: Cleaned weather
-├── viirs_clean.parquet              # Phase 2: Cleaned VIIRS
-├── ports_clean.parquet              # Phase 2: Cleaned ports
-├── gfw_events_enriched.parquet      # Phase 3: All features joined
-├── vessel_profiles.parquet          # Phase 3: Per-vessel behavioral profiles
-├── iuu_labels.parquet               # Phase 4: IUU labels + indicators
-├── graph_data/
-│   ├── nodes.parquet                # Phase 5: Node features
-│   ├── edges_spatial.parquet        # Phase 5: Spatial edges
-│   ├── edges_temporal.parquet       # Phase 5: Temporal edges
-│   └── graph_metadata.json          # Phase 5: Graph config
-├── train/
-│   ├── nodes.parquet
-│   ├── edges_spatial.parquet
-│   └── edges_temporal.parquet
-├── val/
-│   └── ...
-└── test/
-    └── ...
-```
+| Planned | Actual | Reason |
+|---------|--------|--------|
+| MMSI as int in registry | MMSI as string everywhere | GFW uses string ssvid; join compatibility |
+| Zenodo filtered by flag | Zenodo filtered by bbox | 30M global rows; flag filter missed foreign vessels in IDN waters |
+| 4 weather zones | 8 weather zones | BMKG data has 8 zones; mapping was too coarse |
+| EEZ/MPA spatial join | GFW regions field | No usable shapefiles available at time of implementation |
+| VIIRS date as datetime | VIIRS date_gmt as int64, parsed manually | Raw data format; `pd.to_datetime(str, format="%Y%m%d")` |
+| `df.apply()` for sea_zone | `np.select()` vectorized | 100x faster on 512K rows |
+| Lambda for unique_grid_cells | Two-stage groupby | Original lambda was buggy |
+| Steps 3.2-3.3 separate | Already done in Phase 2 | Temporal features added during cleaning |
+| 124 columns (audit) | 121 columns (final) | 3 columns removed/merged during collision fix |
 
 ---
 
-## 🔧 Implementation Scripts
-
-### New files to create in `src/`:
-
-```
-src/
-├── data/
-│   ├── loaders.py              # All Phase 1 loaders (GFW, SAR, Zenodo, etc.)
-│   └── validators.py           # Phase 2 validation functions
-├── features/
-│   ├── vessel_features.py      # Step 3.1: Vessel profile features
-│   ├── spatial_features.py     # Step 3.2: Spatial features + GIS joins
-│   ├── temporal_features.py    # Step 3.3: Temporal features
-│   ├── behavioral_features.py  # Step 3.4: Per-vessel behavioral profiles
-│   └── enrichment.py           # Step 3.5: Cross-source enrichment
-├── labeling/
-│   ├── iuu_rules.py            # Step 4.1-4.2: IUU label assignment
-│   └── sar_ais_match.py        # Step 4.3: SAR-AIS cross-matching
-├── graph/
-│   ├── build_graphs.py         # Step 5: Graph construction
-│   └── split_dataset.py        # Step 6: Train/val/test split
-└── pipeline.py                 # Orchestrator: run full pipeline
-```
-
-### Master Pipeline Script
-
-```python
-# python -m src.pipeline --phase all --output data/processed/
-
-# Or individual phases:
-# python -m src.pipeline --phase load      # Phase 1 only
-# python -m src.pipeline --phase clean     # Phase 2 only
-# python -m src.pipeline --phase features  # Phase 3 only
-# python -m src.pipeline --phase label     # Phase 4 only
-# python -m src.pipeline --phase graph     # Phase 5 only
-# python -m src.pipeline --phase split     # Phase 6 only
-```
-
----
-
-## ⚠️ Known Challenges & Mitigations
-
-| Challenge | Impact | Mitigation |
-|-----------|--------|------------|
-| **Class imbalance** (few IUU vs many normal) | Model bias toward normal | SMOTE/oversampling, weighted loss, anomaly detection approach |
-| **Missing vessel registry data** | Can't identify unregistered vessels | Use SAR cross-matching as alternative signal |
-| **Weather data only 2024** | Can't enrich historical events | Use Open-Meteo historical API for backfill |
-| **VIIRS is sample data** | Limited VIIRS enrichment | Focus on SAR + AIS as primary IUU signals |
-| **BPS data incomplete** | No ground truth on legal catch | Use as supplementary feature only |
-| **Zenodo effort only 2020-2021** | Gaps in 2022-2024 effort | Use GFW 4Wings effort (already have) |
-| **MPA boundaries are sample** | Incomplete MPA coverage | Download full WDPA dataset |
-| **SAR is gridded (0.1°)** | Not precise vessel positions | Use as area-level signal, not point-level |
-| **No ground truth labels** | IUU labels are heuristic | Use multi-tier approach with confidence scores |
-
----
-
-## 📅 Daily Schedule
-
-| Day | Phase | Tasks | Estimated Time |
-|-----|-------|-------|----------------|
-| **Day 1** | Phase 1 | Load & flatten all sources → Parquet | 4-6 hours |
-| **Day 2** | Phase 2 | Clean, validate, dedup, spatial joins | 4-6 hours |
-| **Day 3** | Phase 3.1-3.3 | Vessel, spatial, temporal features | 4-5 hours |
-| **Day 4** | Phase 3.4-3.5 | Behavioral features, cross-source enrichment | 5-6 hours |
-| **Day 4** | Phase 4 | IUU labeling + SAR-AIS matching | 3-4 hours |
-| **Day 5** | Phase 5-6 | Graph construction + dataset split | 4-6 hours |
-
-**Total estimated: 24-33 hours of focused work**
-
----
-
-## ✅ Validation Checkpoints
-
-After each phase, validate:
-
-- [ ] **Phase 1:** Row counts match expected (±5%), no data loss
-- [ ] **Phase 2:** No nulls in critical fields (mmsi, lat, lon, timestamp)
-- [ ] **Phase 3:** Feature distributions look reasonable (no infinity, no negative distances)
-- [ ] **Phase 4:** IUU label distribution: expect 5-15% positive (if too high/low, review rules)
-- [ ] **Phase 5:** Graph connectivity: average degree ≥ 2, no disconnected components > 50%
-- [ ] **Phase 6:** Train/val/test have similar label distribution (±2%)
-
----
-
-*Generated: 2026-04-21*
+*Updated: 2026-04-22*
 *Project: IUU Fishing Detection — Gemastik XIX 2026*
 *Team: Toni, Nafi, Rhendy*

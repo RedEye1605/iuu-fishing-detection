@@ -51,9 +51,9 @@ gemastik/
 │   │   ├── mpa_setup.py         # Marine Protected Area boundaries
 │   │   └── weather_client.py    # BMKG marine weather data
 │   ├── features/
-│   │   └── graph_builder.py     # ST-GAT graph construction (Phase 2)
+│   │   └── graph_builder.py     # ST-GAT graph construction (placeholder)
 │   ├── models/
-│   │   └── stgat.py             # ST-GAT model architecture (Phase 3)
+│   │   └── stgat.py             # ST-GAT model architecture (placeholder)
 │   └── utils/
 │       ├── config.py            # Centralized configuration
 │       └── geo_utils.py         # Geospatial utility functions
@@ -64,7 +64,7 @@ gemastik/
 ├── archive/                     # Deprecated script versions
 ├── notebooks/                   # Jupyter exploration notebooks
 ├── tests/                       # Unit tests
-├── docs/                        # Research plan & data source docs
+├── docs/                        # Documentation
 ├── data/                        # Raw & processed data (gitignored)
 ├── .env.example                 # Environment variable template
 ├── pyproject.toml               # Package metadata & dependencies
@@ -111,53 +111,75 @@ Zenodo historical effort files are distributed via [GitHub Release](https://gith
 
 ---
 
-## 📊 Data Status
+## 🚀 Running the Pipeline
 
-| Dataset | Records | Coverage |
-|---------|---------|----------|
-| GFW Events | 512,272 | 2016–2025 |
-| GFW SAR Presence | 1,242,915 | 2020–2025 |
-| GFW Fishing Effort | 890,411 | 2020–2025 |
-| EEZ Shapefiles | v12 | Global |
-| Indonesia Ports | 30 ports | — |
-| BMKG Weather | 2,921 rows | 2024 |
-| VIIRS Sample | 5,001 | — |
-
-Full report: [DATA_COMPLETENESS_REPORT.md](DATA_COMPLETENESS_REPORT.md)
-
-### Pipeline Complete ✅ ALL PHASES DONE
-
-Final output: `data/processed/gfw_events_full.parquet` (512K rows, 105+ cols)
-
-**Run the pipeline:**
 ```bash
-python scripts/run_pipeline.py          # Run all phases
-python scripts/run_pipeline.py --phase 2  # Run only Phase 2
-python scripts/run_pipeline.py --step 3.5 # Run specific step
+python scripts/run_pipeline.py              # Run all phases (1-3)
+python scripts/run_pipeline.py --phase 1    # Run only Phase 1
+python scripts/run_pipeline.py --phase 2    # Run only Phase 2
+python scripts/run_pipeline.py --phase 3    # Run only Phase 3
+python scripts/run_pipeline.py --step 3.5   # Run specific step
 ```
 
-#### Output Files
+The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runtime: ~15-20 minutes depending on I/O.
 
-| File | Rows | Description |
-|------|------|-------------|
-| `gfw_events_full.parquet` | 512K | **Final enriched events** (105+ cols) |
-| `vessel_behavioral_features.parquet` | 15K | Per-vessel behavioral profiles (32 cols) |
-| `vessel_registry.parquet` | 148K | Vessel registry (MMSI as string) |
-| `fishing_effort_clean.parquet` | 886K | Cleaned fishing effort |
-| `sar_presence_clean.parquet` | 742K | Cleaned SAR presence |
-| `zenodo_effort_clean.parquet` | 613K | Cleaned Zenodo effort |
-| `weather.parquet` | 3K | BMKG marine weather |
-| `viirs_detections.parquet` | 5K | VIIRS boat detections |
-| `ports.parquet` | 30 | Indonesia port locations |
+---
 
-#### Pipeline Phases
+## 📊 Final Dataset
 
-1. **Phase 1: Load & Flatten** — Raw JSON/CSV → Parquet
-2. **Phase 2: Clean & Validate** — Dedup, flag standardize, coordinate validation
-3. **Phase 3: Feature Engineering** — Vessel profiles, behavioral features, cross-source enrichment
+### `data/processed/gfw_events_full.parquet`
+- **Rows:** 512,247 events
+- **Columns:** 121
+- **Size:** 80.7 MB
+- **Coverage:** Indonesian waters, 2020–2025
+- **Event types:** Fishing (56%), Loitering (25%), Port Visit (10%), Encounter (9%)
+- **Vessel flags:** 47% domestic, 53% foreign
 
-Full audit: [docs/AUDIT_REPORT.md](docs/AUDIT_REPORT.md)
-Schema: [docs/PIPELINE_SCHEMA.md](docs/PIPELINE_SCHEMA.md)
+### All Output Files
+
+| File | Rows | Cols | Description |
+|------|------|------|-------------|
+| `gfw_events_full.parquet` | 512,247 | 121 | **Final enriched events** |
+| `gfw_events_clean.parquet` | 512,247 | 66 | Cleaned events (pre-enrichment) |
+| `gfw_events_flat.parquet` | 512,272 | 54 | Raw flattened events |
+| `vessel_behavioral_features.parquet` | 14,857 | 32 | Per-vessel behavioral profiles |
+| `vessel_registry.parquet` | 147,924 | 12 | Zenodo vessel registry |
+| `fishing_effort_clean.parquet` | 885,649 | 18 | Cleaned GFW fishing effort |
+| `sar_presence_clean.parquet` | 742,075 | 18 | Cleaned SAR presence |
+| `zenodo_effort_clean.parquet` | 707,118 | 12 | Cleaned Zenodo effort (spatially filtered) |
+| `weather.parquet` | 2,920 | 9 | BMKG marine weather |
+| `viirs_detections.parquet` | 5,000 | 8 | VIIRS boat detections (sample) |
+| `ports.parquet` | 30 | 3 | Indonesia port locations |
+
+### Feature Categories (121 columns)
+
+| Category | Columns | Description |
+|----------|---------|-------------|
+| Core | 12 | ID, type, timestamps, coordinates |
+| Vessel | 4 | Name, ID, flag, type |
+| Regions | 5 | EEZ, MPA, RFMO, FAO zones |
+| Authorization | 5 | Auth status, risk flags |
+| Event-specific | 20 | Port, encounter, loitering details |
+| Temporal | 8 | Hour, day, month, season, etc. |
+| Registry | 9 | Vessel class, length, engine, tonnage |
+| Spatial | 5 | Grid cell, sea zone, nearest port |
+| Weather | 7 | Wind, wave, temp, visibility |
+| VIIRS | 3 | Detection count, radiance, nearby flag |
+| SAR/Effort | 4 | Detection density, effort density |
+| Behavioral | 22 | Per-vessel fishing/encounter/loitering patterns |
+
+---
+
+## ⚠️ Known Limitations
+
+| Limitation | Impact | Notes |
+|-----------|--------|-------|
+| Registry fill rate 50.3% | Missing vessel specs for ~half of vessels | 1,598/14,857 MMSIs matched in Zenodo registry |
+| VIIRS is sample data (5K rows) | Limited VIIRS enrichment | Focus on SAR + AIS as primary signals |
+| Weather data only 2024 | No historical weather enrichment | Consider Open-Meteo API for backfill |
+| No EEZ/MPA shapefile spatial join | Uses GFW regions field instead | GFW regions data is reliable for Indonesia |
+| `potential_risk` only 0.4% True | Severe class imbalance | May need anomaly detection approach |
+| 30 ports only | Limited port coverage | Major ports covered; add from OSM for more |
 
 ---
 
@@ -174,8 +196,8 @@ Schema: [docs/PIPELINE_SCHEMA.md](docs/PIPELINE_SCHEMA.md)
 - [x] Phase 1: Load & Flatten (all sources → Parquet)
 - [x] Phase 2: Clean & Validate (dedup, flag standardize, outliers)
 - [x] Phase 3: Feature Engineering (vessel profiles, behavioral, enrichment)
-- [ ] Exploratory notebooks
-- [ ] AIS trajectory cleaning & segmentation
+- [x] Full pipeline audit and bug fixes
+- [x] Documentation updated to match implementation
 
 ### 🔄 Week 3 — Model Development
 - [ ] ST-GAT architecture implementation
@@ -190,11 +212,14 @@ Schema: [docs/PIPELINE_SCHEMA.md](docs/PIPELINE_SCHEMA.md)
 
 ---
 
-## 🧪 Testing
+## 📖 Documentation
 
-```bash
-pytest tests/ -v
-```
+- [Pipeline Implementation Plan](docs/DATA_PIPELINE_IMPLEMENTATION_PLAN.md) — Full pipeline details
+- [Pipeline Schema](docs/PIPELINE_SCHEMA.md) — All parquet file schemas
+- [Audit Report](docs/AUDIT_REPORT.md) — Data quality audit
+- [Data Quality Report](docs/DATA_QUALITY_REPORT.md) — ML readiness assessment
+- [Phase 1 Findings](docs/PHASE1_AUDIT_FINDINGS.md) — Initial data audit
+- [CHANGELOG.md](CHANGELOG.md) — Version history
 
 ---
 
@@ -208,4 +233,4 @@ pytest tests/ -v
 
 ---
 
-*Last updated: 2026-04-21*
+*Last updated: 2026-04-22*
