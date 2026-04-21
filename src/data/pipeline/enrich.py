@@ -1,17 +1,27 @@
 """
-Phase 3 Step 3.5: Cross-Source Enrichment
+Phase 3b: Cross-Source Enrichment
 
-Enrich GFW events with: weather, VIIRS proximity, SAR density, effort density, behavioral features.
-Output: data/processed/gfw_events_full.parquet
+Enrich GFW events with weather, VIIRS proximity, SAR density,
+effort density, and behavioral features.
+
+Functions:
+- enrich_weather: Merge weather data
+- enrich_viirs: Merge VIIRS proximity
+- enrich_sar_density: Merge SAR density
+- enrich_effort_density: Merge effort density
+- enrich_behavioral: Merge behavioral features
+- run_enrich_all: Run all enrichment, save gfw_events_full.parquet
 """
 
 from __future__ import annotations
-import gc, logging
-from pathlib import Path
-import pandas as pd
-import numpy as np
 
-from .constants import (
+import gc
+import logging
+from pathlib import Path
+
+import pandas as pd
+
+from ..constants import (
     PROCESSED_DIR,
     GFW_EVENTS_ENRICHED, VESSEL_BEHAVIORAL, GFW_EVENTS_FULL,
     WEATHER_PARQUET, VIIRS_PARQUET,
@@ -23,8 +33,8 @@ INPUT = PROCESSED_DIR
 OUTPUT = PROCESSED_DIR
 
 
-def get_weather_zone(lat, lon):
-    """Map coordinates to weather zones — covers all 8 BMKG marine weather zones."""
+def get_weather_zone(lat: float, lon: float) -> str:
+    """Map coordinates to BMKG marine weather zones."""
     if pd.isna(lat) or pd.isna(lon):
         return "unknown"
     if lat >= 2 and lon <= 105:
@@ -44,20 +54,16 @@ def get_weather_zone(lat, lon):
     return "Arafura Sea"
 
 
-def run_step_3_5():
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
+def enrich_weather(df: pd.DataFrame) -> pd.DataFrame:
+    """Merge weather data based on zone, year, month.
 
-    logger.info("=" * 60 + "\nSTEP 3.5: CROSS-SOURCE ENRICHMENT\n" + "=" * 60)
+    Args:
+        df: Events DataFrame with ev_year, ev_month columns.
 
-    df = pd.read_parquet(INPUT / GFW_EVENTS_ENRICHED)
-    logger.info(f"Events: {len(df):,} rows × {len(df.columns)} cols")
-
-    df["ev_year"] = df["start_time"].dt.year
-    df["ev_month"] = df["start_time"].dt.month
-    df["ev_date"] = df["start_time"].dt.date
-
-    # ===== 3.5a: WEATHER =====
-    logger.info("\n--- 3.5a: Weather ---")
+    Returns:
+        DataFrame with weather columns added.
+    """
+    logger.info("--- Weather Enrichment ---")
     weather = pd.read_parquet(INPUT / WEATHER_PARQUET)
     weather["date"] = pd.to_datetime(weather["date"])
     weather["w_month"] = weather["date"].dt.month
@@ -72,13 +78,22 @@ def run_step_3_5():
         if c in df.columns: df.drop(columns=c, inplace=True)
     wf = df.filter(like="weather_").notna().any(axis=1).sum()
     logger.info(f"  Enriched: {wf:,} / {len(df):,} ({wf/len(df)*100:.1f}%)")
+    return df
 
-    # ===== 3.5b: VIIRS =====
-    logger.info("\n--- 3.5b: VIIRS ---")
+
+def enrich_viirs(df: pd.DataFrame) -> pd.DataFrame:
+    """Merge VIIRS boat detection proximity data.
+
+    Args:
+        df: Events DataFrame with grid_lat, grid_lon, ev_date columns.
+
+    Returns:
+        DataFrame with viirs_count and viirs_detection_nearby columns.
+    """
+    logger.info("--- VIIRS Enrichment ---")
     viirs = pd.read_parquet(INPUT / VIIRS_PARQUET)
     viirs["grid_lat"] = (viirs["lat"] * 10).round(0) / 10
     viirs["grid_lon"] = (viirs["lon"] * 10).round(0) / 10
-    # FIX: Correct VIIRS date parsing — date_gmt is int64 (e.g. 20240405)
     viirs["vdate"] = pd.to_datetime(viirs["date_gmt"].astype(str), format="%Y%m%d", errors="coerce").dt.date
 
     viirs_counts = viirs.groupby(["grid_lat","grid_lon","vdate"]).agg(
@@ -92,9 +107,19 @@ def run_step_3_5():
     df["viirs_avg_radiance"] = df["viirs_avg_radiance"].fillna(0)
     if "vdate" in df.columns: df.drop(columns="vdate", inplace=True)
     logger.info(f"  VIIRS nearby: {df['viirs_detection_nearby'].sum():,} events")
+    return df
 
-    # ===== 3.5c: SAR DENSITY =====
-    logger.info("\n--- 3.5c: SAR Density ---")
+
+def enrich_sar_density(df: pd.DataFrame) -> pd.DataFrame:
+    """Merge SAR detection density per grid cell/month.
+
+    Args:
+        df: Events DataFrame with grid_lat, grid_lon, ev_year, ev_month columns.
+
+    Returns:
+        DataFrame with sar_total_detections and sar_unique_vessels columns.
+    """
+    logger.info("--- SAR Density Enrichment ---")
     sar = pd.read_parquet(INPUT / SAR_PRESENCE_CLEAN,
                           columns=["lat","lon","year","month","detections","mmsi"])
     sar["grid_lat"] = (sar["lat"] * 10).round(0) / 10
@@ -112,9 +137,19 @@ def run_step_3_5():
         if c in df.columns: df.drop(columns=c, inplace=True)
     logger.info(f"  SAR enriched: {(df['sar_total_detections']>0).sum():,} events")
     del sar, sar_density; gc.collect()
+    return df
 
-    # ===== 3.5d: EFFORT DENSITY =====
-    logger.info("\n--- 3.5d: Effort Density ---")
+
+def enrich_effort_density(df: pd.DataFrame) -> pd.DataFrame:
+    """Merge fishing effort density per grid cell/month.
+
+    Args:
+        df: Events DataFrame with grid_lat, grid_lon, ev_year, ev_month columns.
+
+    Returns:
+        DataFrame with effort_hours_in_cell and effort_vessels_in_cell columns.
+    """
+    logger.info("--- Effort Density Enrichment ---")
     effort = pd.read_parquet(INPUT / FISHING_EFFORT_CLEAN,
                               columns=["lat","lon","fishing_hours","year","month"])
     effort["grid_lat"] = (effort["lat"] * 10).round(0) / 10
@@ -132,52 +167,74 @@ def run_step_3_5():
         if c in df.columns: df.drop(columns=c, inplace=True)
     logger.info(f"  Effort enriched: {(df['effort_hours_in_cell']>0).sum():,} events")
     del effort, eff_density; gc.collect()
+    return df
 
-    # ===== BEHAVIORAL FEATURES =====
-    logger.info("\n--- Behavioral Features ---")
+
+def enrich_behavioral(df: pd.DataFrame) -> pd.DataFrame:
+    """Merge per-vessel behavioral features.
+
+    Args:
+        df: Events DataFrame with mmsi column.
+
+    Returns:
+        DataFrame with behavioral feature columns added.
+    """
+    logger.info("--- Behavioral Features ---")
     behavior = pd.read_parquet(INPUT / VESSEL_BEHAVIORAL)
 
-    # FIX: Drop columns that would collide with existing event columns before merge
-    collision_cols = [c for c in behavior.columns
-                     if c in df.columns and c != "mmsi"]
-    # Keep behavioral version (drop from events before merge would lose data,
-    # so we rename behavioral cols that conflict)
-    # Actually: drop collision cols from behavior to keep event-level data
+    # Drop columns that would collide with existing event columns
+    collision_cols = [c for c in behavior.columns if c in df.columns and c != "mmsi"]
     behavior_clean = behavior.drop(columns=[c for c in collision_cols
                                              if c in ["vessel_flag", "is_domestic", "avg_speed_knots"]])
 
     df = df.merge(behavior_clean, on="mmsi", how="left")
     logger.info(f"  After merge: {len(df):,} × {len(df.columns)} cols")
+    return df
+
+
+def run_enrich_all() -> Path:
+    """Run all enrichment steps and save final enriched events.
+
+    Returns:
+        Path to gfw_events_full.parquet
+    """
+    logger.info("Loading enriched events...")
+    df = pd.read_parquet(INPUT / GFW_EVENTS_ENRICHED)
+    logger.info(f"Events: {len(df):,} rows × {len(df.columns)} cols")
+
+    df["ev_year"] = df["start_time"].dt.year
+    df["ev_month"] = df["start_time"].dt.month
+    df["ev_date"] = df["start_time"].dt.date
+
+    df = enrich_weather(df)
+    df = enrich_viirs(df)
+    df = enrich_sar_density(df)
+    df = enrich_effort_density(df)
+    df = enrich_behavioral(df)
 
     # Cleanup temp columns
     for c in ["ev_year","ev_month","ev_date"]:
         if c in df.columns: df.drop(columns=c, inplace=True)
 
-    # FIX: Drop any remaining column name collision artifacts (_x/_y suffixes)
-    dup_suffixes = [c for c in df.columns if c.endswith("_x") or c.endswith("_y")]
-    # Keep the first occurrence (drop _y, rename _x if needed)
-    for c in list(dup_suffixes):
-        base = c[:-2]
-        if f"{base}_x" in df.columns and f"{base}_y" in df.columns:
-            # Drop the _y version, rename _x to base
-            df.drop(columns=f"{base}_y", inplace=True)
-            df.rename(columns={f"{base}_x": base}, inplace=True)
-        elif c.endswith("_x"):
+    # Fix column collision artifacts (_x/_y suffixes)
+    for c in list(df.columns):
+        if c.endswith("_x"):
+            base = c[:-2]
+            if f"{base}_y" in df.columns:
+                df.drop(columns=f"{base}_y", inplace=True)
             df.rename(columns={c: base}, inplace=True)
+        elif c.endswith("_y") and c[:-2] in df.columns:
+            df.drop(columns=c, inplace=True)
 
     # Drop SAR/effort suffixed collision columns
     dup_cols = [c for c in df.columns if c.endswith("_sar") or c.endswith("_eff")]
     for c in dup_cols: df.drop(columns=c, inplace=True)
 
-    # ===== FINAL =====
-    logger.info(f"FINAL ENRICHED EVENTS: {len(df):,} rows × {len(df.columns)} cols")
+    logger.info(f"FINAL: {len(df):,} rows × {len(df.columns)} cols")
     logger.info(f"Columns: {sorted(df.columns.tolist())}")
 
     out = OUTPUT / GFW_EVENTS_FULL
     df.to_parquet(out, index=False, compression="snappy")
-    sz = out.stat().st_size / 1024 / 1024
-    logger.info(f"✅ Saved to {out} ({sz:.1f} MB)")
-
-
-if __name__ == "__main__":
-    run_step_3_5()
+    logger.info(f"✅ Saved to {out} ({out.stat().st_size / 1024 / 1024:.1f} MB)")
+    del df; gc.collect()
+    return out
