@@ -34,9 +34,16 @@ gemastik/
 │   ├── __init__.py
 │   ├── data/
 │   │   ├── __init__.py
-│   │   ├── loaders.py              # Phase 1: GFW events loader
-│   │   ├── loaders_sar_effort.py    # Phase 1: SAR & fishing effort loader
-│   │   ├── loaders_aux.py          # Phase 1: Auxiliary data loader (weather, VIIRS, ports, registry)
+│   │   ├── constants.py           # Shared constants (paths, flags, bbox)
+│   │   ├── loaders.py              # Phase 1 Step 1.1: GFW events loader
+│   │   ├── loaders_sar_effort.py    # Phase 1 Step 1.2: SAR & fishing effort loader
+│   │   ├── loaders_aux.py          # Phase 1 Steps 1.3-1.5: Auxiliary data loader
+│   │   ├── step_2_1_dedup.py       # Phase 2 Step 2.1: Deduplication
+│   │   ├── step_2_2_clean.py       # Phase 2 Steps 2.2-2.6: Clean & validate
+│   │   ├── step_2_7_clean_rest.py  # Phase 2 Step 2.7: Clean remaining datasets
+│   │   ├── step_3_1_vessel_features.py  # Phase 3 Step 3.1: Vessel features
+│   │   ├── step_3_4_behavioral.py  # Phase 3 Step 3.4: Behavioral features
+│   │   ├── step_3_5_enrichment.py  # Phase 3 Step 3.5: Cross-source enrichment
 │   │   ├── gfw_client.py        # GFW API client (events, SAR, effort)
 │   │   ├── bps_client.py        # BPS fisheries statistics
 │   │   ├── synthetic.py         # Synthetic AIS data generator
@@ -51,6 +58,7 @@ gemastik/
 │       ├── config.py            # Centralized configuration
 │       └── geo_utils.py         # Geospatial utility functions
 ├── scripts/
+│   ├── run_pipeline.py          # Master pipeline runner (Phase 1-3)
 │   ├── pull_sar_data.py         # GFW 4Wings SAR data puller
 │   └── download_large_data.sh   # Zenodo data download helper
 ├── archive/                     # Deprecated script versions
@@ -117,21 +125,39 @@ Zenodo historical effort files are distributed via [GitHub Release](https://gith
 
 Full report: [DATA_COMPLETENESS_REPORT.md](DATA_COMPLETENESS_REPORT.md)
 
-### Phase 1: Load & Flatten ✅ COMPLETE
-8 Parquet files in `data/processed/` ready for Phase 2 cleaning:
+### Pipeline Complete ✅ ALL PHASES DONE
 
-| File | Size | Rows | Description |
-|------|------|------|-------------|
-| `gfw_events_flat.parquet` | 64MB | 512K | All GFW events (fishing, encounters, loitering, port visits) |
-| `sar_presence_flat.parquet` | 41MB | 1.2M | SAR-derived vessel presence |
-| `fishing_effort_flat.parquet` | 17MB | 890K | AIS fishing effort estimates |
-| `vessel_registry.parquet` | 6MB | 148K | Zenodo vessel registry (IDN) |
-| `zenodo_effort_flat.parquet` | 237MB | 30M | Grid-level fishing effort |
-| `weather.parquet` | — | 3K | BMKG marine weather |
-| `viirs_detections.parquet` | — | 5K | VIIRS boat detections |
-| `ports.parquet` | — | 30 | Indonesia port locations |
+Final output: `data/processed/gfw_events_full.parquet` (512K rows, 105+ cols)
 
-Audit findings: [docs/PHASE1_AUDIT_FINDINGS.md](docs/PHASE1_AUDIT_FINDINGS.md)
+**Run the pipeline:**
+```bash
+python scripts/run_pipeline.py          # Run all phases
+python scripts/run_pipeline.py --phase 2  # Run only Phase 2
+python scripts/run_pipeline.py --step 3.5 # Run specific step
+```
+
+#### Output Files
+
+| File | Rows | Description |
+|------|------|-------------|
+| `gfw_events_full.parquet` | 512K | **Final enriched events** (105+ cols) |
+| `vessel_behavioral_features.parquet` | 15K | Per-vessel behavioral profiles (32 cols) |
+| `vessel_registry.parquet` | 148K | Vessel registry (MMSI as string) |
+| `fishing_effort_clean.parquet` | 886K | Cleaned fishing effort |
+| `sar_presence_clean.parquet` | 742K | Cleaned SAR presence |
+| `zenodo_effort_clean.parquet` | 613K | Cleaned Zenodo effort |
+| `weather.parquet` | 3K | BMKG marine weather |
+| `viirs_detections.parquet` | 5K | VIIRS boat detections |
+| `ports.parquet` | 30 | Indonesia port locations |
+
+#### Pipeline Phases
+
+1. **Phase 1: Load & Flatten** — Raw JSON/CSV → Parquet
+2. **Phase 2: Clean & Validate** — Dedup, flag standardize, coordinate validation
+3. **Phase 3: Feature Engineering** — Vessel profiles, behavioral features, cross-source enrichment
+
+Full audit: [docs/AUDIT_REPORT.md](docs/AUDIT_REPORT.md)
+Schema: [docs/PIPELINE_SCHEMA.md](docs/PIPELINE_SCHEMA.md)
 
 ---
 
@@ -144,15 +170,14 @@ Audit findings: [docs/PHASE1_AUDIT_FINDINGS.md](docs/PHASE1_AUDIT_FINDINGS.md)
 - [x] VIIRS / BMKG / BPS sample data
 - [x] EEZ shapefiles & port data
 
-### 🔄 Week 2 — Preprocessing & EDA
+### ✅ Week 2 — Preprocessing & EDA (COMPLETE)
 - [x] Phase 1: Load & Flatten (all sources → Parquet)
-- [ ] Phase 2: Clean & Validate
-- [ ] AIS trajectory cleaning & segmentation
-- [ ] Feature engineering (speed, heading, zone crossings)
-- [ ] Spatial joins with EEZ/MPA boundaries
+- [x] Phase 2: Clean & Validate (dedup, flag standardize, outliers)
+- [x] Phase 3: Feature Engineering (vessel profiles, behavioral, enrichment)
 - [ ] Exploratory notebooks
+- [ ] AIS trajectory cleaning & segmentation
 
-### 📅 Week 3 — Model Development
+### 🔄 Week 3 — Model Development
 - [ ] ST-GAT architecture implementation
 - [ ] Graph construction pipeline
 - [ ] Training & hyperparameter tuning

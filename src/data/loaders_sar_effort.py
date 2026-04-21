@@ -5,9 +5,6 @@ Input: 4wings_sar_presence_indonesia_corrected.json.gz (1.2M records)
        4wings_fishing_effort_indonesia_corrected.json.gz (890K records)
 Output: data/processed/sar_presence_flat.parquet
         data/processed/fishing_effort_flat.parquet
-
-Structure: {metadata: {...}, entries: [{dataset_key: [records]}, ...]}
-Each entry is one year's worth of gridded data.
 """
 
 from __future__ import annotations
@@ -19,16 +16,15 @@ from pathlib import Path
 
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+from .constants import GFW_RAW_DIR, PROCESSED_DIR, GFW_SAR_FILE, GFW_EFFORT_FILE, SAR_PRESENCE_FLAT, FISHING_EFFORT_FLAT
 
-DATA_DIR = Path("data/raw/gfw")
-OUTPUT_DIR = Path("data/processed")
+logger = logging.getLogger(__name__)
 
 
 def flatten_sar_presence() -> pd.DataFrame:
     """Flatten SAR presence data."""
     logger.info("Loading SAR presence...")
-    with gzip.open(DATA_DIR / "4wings_sar_presence_indonesia_corrected.json.gz", "rt") as f:
+    with gzip.open(GFW_RAW_DIR / GFW_SAR_FILE, "rt") as f:
         data = json.load(f)
 
     metadata = data.get("metadata", {})
@@ -67,7 +63,7 @@ def flatten_sar_presence() -> pd.DataFrame:
 def flatten_fishing_effort() -> pd.DataFrame:
     """Flatten fishing effort data."""
     logger.info("Loading fishing effort...")
-    with gzip.open(DATA_DIR / "4wings_fishing_effort_indonesia_corrected.json.gz", "rt") as f:
+    with gzip.open(GFW_RAW_DIR / GFW_EFFORT_FILE, "rt") as f:
         data = json.load(f)
 
     metadata = data.get("metadata", {})
@@ -106,50 +102,28 @@ def flatten_fishing_effort() -> pd.DataFrame:
 def run_step_1_2():
     """Execute Phase 1 Step 1.2."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
     # SAR Presence
     df_sar = flatten_sar_presence()
-    
-    print(f"\n{'='*60}")
-    print("STEP 1.2a — SAR PRESENCE VALIDATION")
-    print(f"{'='*60}")
-    print(f"Total rows: {len(df_sar):,}")
-    print(f"Columns: {df_sar.columns.tolist()}")
-    print(f"\nDate range: {df_sar['date'].unique()[:10]}")
-    print(f"\nMMSI coverage:")
-    print(f"  Non-empty MMSI: {(df_sar['mmsi'] != '').sum():,} ({(df_sar['mmsi'] != '').mean()*100:.1f}%)")
-    print(f"  Empty MMSI (grid-only): {(df_sar['mmsi'] == '').sum():,}")
-    print(f"\nDetections stats:")
-    print(df_sar['detections'].describe().to_string())
-    print(f"\nFlag distribution (top 5):")
-    flags = df_sar[df_sar['flag'] != '']['flag'].value_counts()
-    print(flags.head(5).to_string() if len(flags) > 0 else "  No flag data")
+    logger.info(f"SAR Presence: {len(df_sar):,} rows, columns: {df_sar.columns.tolist()}")
+    logger.info(f"Non-empty MMSI: {(df_sar['mmsi'] != '').sum():,} ({(df_sar['mmsi'] != '').mean()*100:.1f}%)")
+    logger.info(f"Detections stats:\n{df_sar['detections'].describe().to_string()}")
 
-    sar_path = OUTPUT_DIR / "sar_presence_flat.parquet"
+    sar_path = PROCESSED_DIR / SAR_PRESENCE_FLAT
     df_sar.to_parquet(sar_path, index=False)
-    print(f"\n✅ Saved to {sar_path} ({sar_path.stat().st_size / 1024 / 1024:.1f} MB)")
+    logger.info(f"✅ Saved to {sar_path} ({sar_path.stat().st_size / 1024 / 1024:.1f} MB)")
 
     # Fishing Effort
     df_effort = flatten_fishing_effort()
-    
-    print(f"\n{'='*60}")
-    print("STEP 1.2b — FISHING EFFORT VALIDATION")
-    print(f"{'='*60}")
-    print(f"Total rows: {len(df_effort):,}")
-    print(f"Columns: {df_effort.columns.tolist()}")
-    print(f"\nMMSI coverage:")
-    print(f"  Non-empty MMSI: {(df_effort['mmsi'] != '').sum():,} ({(df_effort['mmsi'] != '').mean()*100:.1f}%)")
-    print(f"\nFishing hours stats:")
-    print(df_effort['fishing_hours'].describe().to_string())
-    print(f"\nGeartype distribution:")
-    print(df_effort['geartype'].value_counts().head(10).to_string())
-    print(f"\nFlag distribution (top 5):")
-    print(df_effort['flag'].value_counts().head(5).to_string())
+    logger.info(f"Fishing Effort: {len(df_effort):,} rows, columns: {df_effort.columns.tolist()}")
+    logger.info(f"Fishing hours stats:\n{df_effort['fishing_hours'].describe().to_string()}")
+    logger.info(f"Geartype distribution:\n{df_effort['geartype'].value_counts().head(10).to_string()}")
+    logger.info(f"Flag distribution:\n{df_effort['flag'].value_counts().head(5).to_string()}")
 
-    eff_path = OUTPUT_DIR / "fishing_effort_flat.parquet"
+    eff_path = PROCESSED_DIR / FISHING_EFFORT_FLAT
     df_effort.to_parquet(eff_path, index=False)
-    print(f"\n✅ Saved to {eff_path} ({eff_path.stat().st_size / 1024 / 1024:.1f} MB)")
+    logger.info(f"✅ Saved to {eff_path} ({eff_path.stat().st_size / 1024 / 1024:.1f} MB)")
 
 
 if __name__ == "__main__":

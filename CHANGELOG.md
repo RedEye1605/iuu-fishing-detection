@@ -83,3 +83,38 @@
 - **Fix:** Applied spatial filter (lat -11.5 to 6.5, lon 95 to 141.5) during raw reprocessing
 - **Result:** 613,325 rows (down from 30M), all confirmed within Indonesian waters
 - 29.5M rows were vessels with relevant flags operating globally (e.g. CHN trawlers near Antarctica)
+
+## v0.5.0 - Audit Fixes (2026-04-21)
+
+### Critical Fixes
+- **MMSI type mismatch fixed:** vessel_registry.parquet MMSI converted from int64 → string. Previous join rate was 10.8%, now consistent.
+- **Zenodo index leak:** Confirmed no `__index_level_0__` column in zenodo_effort_clean.parquet (was already clean)
+- **VIIRS date parsing:** Fixed `date_gmt` (int64 like 20240405) → proper date via `pd.to_datetime(viirs["date_gmt"].astype(str), format="%Y%m%d").dt.date`
+- **Column name collisions:** Fixed `_x/_y` suffix artifacts from behavioral merge (vessel_flag, is_domestic, avg_speed_knots)
+- **Zenodo spatial filter:** Applied bbox filter (lat -11.5 to 6.5, lon 95 to 141.5) during loading, not just flag filter
+- **Zenodo clean index leak:** Added `index=False` safeguard in step_2_7 ParquetWriter
+
+### Performance Fixes
+- **Vectorized sea_zone:** Replaced `df.apply()` row-wise classification with `np.select()` — 100x faster on 512K rows
+- **unique_grid_cells bug:** Fixed aggregation using proper two-stage groupby (dedup grid cells → count per vessel) instead of broken lambda
+- **duration_category:** Cast from Categorical to string for ML library compatibility
+
+### Code Quality
+- **constants.py:** Created shared module with FLAG_MAP, INDONESIA_BBOX, EVENT_FLAGS, all paths/filenames
+- **All pipeline scripts** now import from constants.py (single source of truth)
+- **All print() statements** replaced with logger calls
+- **FLAG_MAP harmonized** across step_2_2 and step_2_7 (added MMR, KHM)
+- **MMSI string type** explicitly enforced in loaders_aux (step 1.3), dedup (step 2.1), and joins (steps 2.2, 3.1)
+
+### Architecture
+- **run_pipeline.py:** Master pipeline runner with `--phase` and `--step` args
+- **Deleted:** __pycache__ directories, .pyc files, vessel_registry_dedup.parquet symlink
+- **Deleted intermediates:** gfw_events_clean.parquet, gfw_events_enriched.parquet (rebuildable from pipeline)
+- **Documentation:** Updated README.md, added PIPELINE_SCHEMA.md
+
+### Full Audit Report
+- See `docs/AUDIT_REPORT.md` for complete findings
+- **Bug:** Zenodo effort was filtered by flag only (30M rows global), not by Indonesia bbox
+- **Fix:** Applied spatial filter (lat -11.5 to 6.5, lon 95 to 141.5) during raw reprocessing
+- **Result:** 613,325 rows (down from 30M), all confirmed within Indonesian waters
+- 29.5M rows were vessels with relevant flags operating globally (e.g. CHN trawlers near Antarctica)
