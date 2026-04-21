@@ -44,3 +44,16 @@ models/trained/
 
 # Logs
 *.log
+
+# Processed data (distributed via GitHub Release)
+*.parquet
+
+# Raw data (distributed via GitHub Release)
+data/raw/
+
+# Temp/backup files
+*.bak
+test.html
+
+# Pytest cache
+.pytest_cache/

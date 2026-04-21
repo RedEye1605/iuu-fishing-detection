@@ -33,6 +33,10 @@ gemastik/
 ├── src/
 │   ├── __init__.py
 │   ├── data/
+│   │   ├── __init__.py
+│   │   ├── loaders.py              # Phase 1: GFW events loader
+│   │   ├── loaders_sar_effort.py    # Phase 1: SAR & fishing effort loader
+│   │   ├── loaders_aux.py          # Phase 1: Auxiliary data loader (weather, VIIRS, ports, registry)
 │   │   ├── gfw_client.py        # GFW API client (events, SAR, effort)
 │   │   ├── bps_client.py        # BPS fisheries statistics
 │   │   ├── synthetic.py         # Synthetic AIS data generator
@@ -113,6 +117,22 @@ Zenodo historical effort files are distributed via [GitHub Release](https://gith
 
 Full report: [DATA_COMPLETENESS_REPORT.md](DATA_COMPLETENESS_REPORT.md)
 
+### Phase 1: Load & Flatten ✅ COMPLETE
+8 Parquet files in `data/processed/` ready for Phase 2 cleaning:
+
+| File | Size | Rows | Description |
+|------|------|------|-------------|
+| `gfw_events_flat.parquet` | 64MB | 512K | All GFW events (fishing, encounters, loitering, port visits) |
+| `sar_presence_flat.parquet` | 41MB | 1.2M | SAR-derived vessel presence |
+| `fishing_effort_flat.parquet` | 17MB | 890K | AIS fishing effort estimates |
+| `vessel_registry.parquet` | 6MB | 148K | Zenodo vessel registry (IDN) |
+| `zenodo_effort_flat.parquet` | 237MB | 30M | Grid-level fishing effort |
+| `weather.parquet` | — | 3K | BMKG marine weather |
+| `viirs_detections.parquet` | — | 5K | VIIRS boat detections |
+| `ports.parquet` | — | 30 | Indonesia port locations |
+
+Audit findings: [docs/PHASE1_AUDIT_FINDINGS.md](docs/PHASE1_AUDIT_FINDINGS.md)
+
 ---
 
 ## 📅 Timeline
@@ -125,6 +145,8 @@ Full report: [DATA_COMPLETENESS_REPORT.md](DATA_COMPLETENESS_REPORT.md)
 - [x] EEZ shapefiles & port data
 
 ### 🔄 Week 2 — Preprocessing & EDA
+- [x] Phase 1: Load & Flatten (all sources → Parquet)
+- [ ] Phase 2: Clean & Validate
 - [ ] AIS trajectory cleaning & segmentation
 - [ ] Feature engineering (speed, heading, zone crossings)
 - [ ] Spatial joins with EEZ/MPA boundaries
