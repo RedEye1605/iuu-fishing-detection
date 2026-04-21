@@ -1,0 +1,46 @@
+[02:21:40] ============================================================
+[02:21:40] GFW DATA COMPLETION - v6
+[02:21:40] ============================================================
+[02:21:40] 
+============================================================
+[02:21:40] === LOITERING (public-global-loitering-events:latest) ===
+[02:21:40] ============================================================
+[02:21:40]   Year 2020...
+[02:21:53]   Total in bbox: 178742
+[02:23:15]   Progress: 5000/178742 (5000 collected)
+[02:24:23]   Progress: 10000/178742 (10000 collected)
+[02:25:33]   Progress: 15000/178742 (15000 collected)
+[02:26:39]   Progress: 20000/178742 (20000 collected)
+[02:27:44]   Progress: 25000/178742 (25000 collected)
+[02:29:00]   Progress: 30000/178742 (30000 collected)
+[02:30:55]   Progress: 35000/178742 (35000 collected)
+[02:33:21]   Progress: 40000/178742 (40000 collected)
+[02:35:57]   Progress: 45000/178742 (45000 collected)
+[02:38:30]   Progress: 50000/178742 (50000 collected)
+[02:41:05]   Progress: 55000/178742 (55000 collected)
+[02:43:54]   Progress: 60000/178742 (60000 collected)
+[02:45:02]   Error (attempt 1): ("Connection broken: ConnectionResetError(104, 'Connection reset by peer')", ConnectionResetError(104, 'Connection reset by peer'))
+[02:47:05]   Progress: 65000/178742 (65000 collected)
+[02:49:45]   Progress: 70000/178742 (70000 collected)
+[02:52:26]   Progress: 75000/178742 (75000 collected)
+[02:54:59]   Progress: 80000/178742 (80000 collected)
+[02:57:39]   Progress: 85000/178742 (85000 collected)
+[03:00:25]   Progress: 90000/178742 (90000 collected)
+[03:03:47]   Progress: 95000/178742 (95000 collected)
+[03:05:32]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"dataset","detail":"This dataset has an unsupported schema or was deprecated","metadata":{}}]}
+[03:05:32]   2020: 96000 events
+[03:05:41]   Saved 96000 → loitering_2020.json.gz (18.9 MB)
+[03:05:43]   Year 2021...
+[03:06:02]   Total in bbox: 348500
+[03:08:41]   Progress: 4500/348500 (4500 collected)
+[03:08:41]   2021: 4500 events
+[03:08:42]   Saved 4500 → loitering_2021.json.gz (0.9 MB)
+[03:08:44]   Year 2024...
+[03:09:07]   Total in bbox: 562992
+[03:11:42]   Progress: 5000/562992 (5000 collected)
+[03:15:50]   Progress: 10000/562992 (10000 collected)
+[03:18:13]   Progress: 12500/562992 (12500 collected)
+[03:18:13]   2024: 12500 events
+[03:18:14]   Saved 12500 → loitering_2024.json.gz (2.4 MB)
+[03:18:16]   Year 2025...
+[03:18:34]   Total in bbox: 562758

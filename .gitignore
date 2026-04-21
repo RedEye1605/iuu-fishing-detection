@@ -11,17 +11,13 @@ build/
 venv/
 env/
 
-# Data files (too large for GitHub)
-data/raw/gfw/
-data/raw/zenodo/
-*.json.gz
-*.csv
-*.zip
-*.tar.gz
-*.parquet
-*.feather
-*.pkl
-*.pickle
+# Large Zenodo files (>100MB, distributed via GitHub Release)
+data/raw/zenodo/fleet-monthly-csvs-10-v3-2020.zip
+data/raw/zenodo/fleet-monthly-csvs-10-v3-2021.zip
+data/raw/zenodo/fleet-monthly-csvs-10-v3-2022.zip
+data/raw/zenodo/fleet-monthly-csvs-10-v3-2023.zip
+data/raw/zenodo/fleet-monthly-csvs-10-v3-2024.zip
+data/raw/zenodo/fishing-vessels-v3.csv
 
 # Models (large binary)
 *.pt
@@ -42,7 +38,7 @@ models/trained/
 # OS
 .DS_Store
 
-# Env
+# Env & secrets
 .env
 .gfw_token
 

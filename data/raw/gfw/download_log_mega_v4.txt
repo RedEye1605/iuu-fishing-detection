@@ -1,0 +1,53 @@
+[03:04:16] ============================================================
+[03:04:16] GFW MEGA PULL v4 - Vessel-based approach
+[03:04:16] ============================================================
+[03:04:16] Loading vessel IDs from encounters...
+[03:04:17] Found 3204 unique vessel IDs
+[03:04:17] 
+============================================================
+[03:04:17] === FISHING EVENTS (public-global-fishing-events:latest) ===
+[03:04:17] ============================================================
+[03:04:17]   Vessels: 3204, Years: (2020, 2021, 2022, 2023, 2024, 2025)
+[03:05:39]   Progress: 500/3204 vessels, 53434 events collected
+[03:06:19]   Progress: 1000/3204 vessels, 123199 events collected
+[03:07:28]   Progress: 1500/3204 vessels, 185935 events collected
+[03:08:17]   Progress: 2000/3204 vessels, 247683 events collected
+[03:08:49]   Progress: 2500/3204 vessels, 304386 events collected
+[03:09:21]   Progress: 3000/3204 vessels, 366771 events collected
+[03:09:36]   Progress: 3204/3204 vessels, 398392 events collected
+[03:09:37]   Bbox filter: 398392 -> 285226 events
+[03:10:03]   Saved 285226 -> fishing_events_indonesia_2020-2025.json.gz (33.2 MB)
+[03:10:05]   2020: 25925 events -> fishing_events_2020.json.gz
+[03:10:08]   2021: 35015 events -> fishing_events_2021.json.gz
+[03:10:13]   2022: 54348 events -> fishing_events_2022.json.gz
+[03:10:19]   2023: 71840 events -> fishing_events_2023.json.gz
+[03:10:26]   2024: 80682 events -> fishing_events_2024.json.gz
+[03:10:28]   2025: 17398 events -> fishing_events_2025.json.gz
+[03:10:29] 
+============================================================
+[03:10:29] === PORT VISITS (public-global-port-visits-events:latest) ===
+[03:10:29] ============================================================
+[03:10:29]   Vessels: 3204, Years: (2020, 2021, 2022, 2023, 2024, 2025)
+[03:11:04]   Progress: 500/3204 vessels, 6641 events collected
+[03:11:37]   Progress: 1000/3204 vessels, 14152 events collected
+[03:12:45]   Progress: 1500/3204 vessels, 23929 events collected
+[03:13:43]   Progress: 2000/3204 vessels, 32240 events collected
+[03:14:51]   Progress: 2500/3204 vessels, 39954 events collected
+[03:15:54]   Progress: 3000/3204 vessels, 48701 events collected
+[03:16:16]   Progress: 3204/3204 vessels, 59010 events collected
+[03:16:17]   Bbox filter: 59010 -> 53298 events
+[03:16:23]   Saved 53298 -> port_visits_indonesia_2020-2025.json.gz (5.4 MB)
+[03:16:24]   2020: 12399 events -> port_visits_2020.json.gz
+[03:16:25]   2021: 8602 events -> port_visits_2021.json.gz
+[03:16:26]   2022: 10745 events -> port_visits_2022.json.gz
+[03:16:27]   2023: 7914 events -> port_visits_2023.json.gz
+[03:16:28]   2024: 11239 events -> port_visits_2024.json.gz
+[03:16:29]   2025: 2309 events -> port_visits_2025.json.gz
+[03:16:29] 
+============================================================
+[03:16:29] === LOITERING (vessel-based) (public-global-loitering-events:latest) ===
+[03:16:29] ============================================================
+[03:16:29]   Vessels: 3204, Years: (2020, 2021, 2024, 2025)
+[03:17:18]   Progress: 500/3204 vessels, 49881 events collected
+[03:17:51]   Progress: 1000/3204 vessels, 112691 events collected
+[03:18:35]   Progress: 1500/3204 vessels, 170957 events collected

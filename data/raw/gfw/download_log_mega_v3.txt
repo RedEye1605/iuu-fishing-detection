@@ -1,0 +1,14 @@
+[02:53:13] ============================================================
+[02:53:13] GFW MEGA PULL v3
+[02:53:13] ============================================================
+[02:53:13] Testing API connection...
+[02:53:13]   POST encounters: 403 → {"message":"Not authorized by permissions","error":"Forbidden","statusCode":403}
+[02:53:14]   GET encounters: 422 → {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[02:53:14] API connection test failed! Check token/permissions.
+[02:53:14] 
+Testing without geometry...
+[02:53:14]   POST no-geo: 403 → {"message":"Not authorized by permissions","error":"Forbidden","statusCode":403}
+[02:53:18]   GET no-geo: 200 → {"metadata":{"datasets":["public-global-encounters-events:v4.0"],"dateRange":{"from":"2024-01-01","to":"2024-03-31"}},"limit":5,"offset":0,"nextOffset":5,"total":512696,"entries":[{"start":"2022-11-03T00:00:00.000Z","end":"2024-02-28T19:40:00.000Z","id":"d7e87f29c1740512d6358dd5b6db9027.2","type":"e
+[02:53:18] 
+Trying different base URL...
+[02:53:19]   GET https://gateway.api.globalfishingwatch.org/v3: 200 → {"metadata":{"datasets":["public-global-encounters-events:v4.0"],"dateRange":{"from":"2024-01-01","to":"2024-03-31"}},"limit":5,"offset":0,"nextOffset":5,"total":512696,"entries":[{"start":"2022-11-03

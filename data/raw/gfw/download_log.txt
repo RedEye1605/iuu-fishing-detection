@@ -1,0 +1,85 @@
+[00:50:18] Starting public-global-encounters-events:latest
+[00:50:31]   Batch offset=0: got 500 entries (total: 500/13782)
+[00:50:37]   Batch offset=500: got 500 entries (total: 1000/13782)
+[00:50:47]   Batch offset=1000: got 500 entries (total: 1500/13782)
+[00:50:53]   Batch offset=1500: got 500 entries (total: 2000/13782)
+[00:50:59]   Batch offset=2000: got 500 entries (total: 2500/13782)
+[00:51:08]   Batch offset=2500: got 500 entries (total: 3000/13782)
+[00:51:16]   Batch offset=3000: got 500 entries (total: 3500/13782)
+[00:51:24]   Batch offset=3500: got 500 entries (total: 4000/13782)
+[00:51:30]   Batch offset=4000: got 500 entries (total: 4500/13782)
+[00:51:41]   Batch offset=4500: got 500 entries (total: 5000/13782)
+[00:51:52]   Batch offset=5000: got 500 entries (total: 5500/13782)
+[00:51:58]   Batch offset=5500: got 500 entries (total: 6000/13782)
+[00:52:10]   Batch offset=6000: got 500 entries (total: 6500/13782)
+[00:52:15]   Batch offset=6500: got 500 entries (total: 7000/13782)
+[00:52:22]   Batch offset=7000: got 500 entries (total: 7500/13782)
+[00:52:36]   Batch offset=7500: got 500 entries (total: 8000/13782)
+[00:53:03]   Batch offset=8000: got 13782 entries (total: 21782/0)
+[00:53:03]   encounters 2022: 21782 events
+[00:53:03] Starting public-global-encounters-events:latest
+[00:53:14]   Batch offset=0: got 500 entries (total: 500/14888)
+[00:53:19]   Batch offset=500: got 500 entries (total: 1000/14888)
+[00:53:26]   Batch offset=1000: got 500 entries (total: 1500/14888)
+[00:53:39]   Batch offset=1500: got 500 entries (total: 2000/14888)
+[00:53:46]   Batch offset=2000: got 500 entries (total: 2500/14888)
+[00:53:58]   Batch offset=2500: got 500 entries (total: 3000/14888)
+[00:54:03]   Batch offset=3000: got 500 entries (total: 3500/14888)
+[00:54:14]   Batch offset=3500: got 500 entries (total: 4000/14888)
+[00:54:24]   Batch offset=4000: got 500 entries (total: 4500/14888)
+[00:54:31]   Batch offset=4500: got 500 entries (total: 5000/14888)
+[00:54:36]   Batch offset=5000: got 500 entries (total: 5500/14888)
+[00:54:46]   Batch offset=5500: got 500 entries (total: 6000/14888)
+[00:54:54]   Batch offset=6000: got 500 entries (total: 6500/14888)
+[00:55:00]   Batch offset=6500: got 500 entries (total: 7000/14888)
+[00:55:08]   Batch offset=7000: got 500 entries (total: 7500/14888)
+[00:55:21]   Batch offset=7500: got 500 entries (total: 8000/14888)
+[00:55:29]   Batch offset=8000: got 500 entries (total: 8500/14888)
+[00:55:40]   Batch offset=8500: got 500 entries (total: 9000/14888)
+[00:55:50]   Batch offset=9000: got 500 entries (total: 9500/14888)
+[00:56:00]   Batch offset=9500: got 500 entries (total: 10000/14888)
+[00:56:08]   Batch offset=10000: got 500 entries (total: 10500/14888)
+[00:56:22]   Batch offset=10500: got 500 entries (total: 11000/14888)
+[00:56:36]   Batch offset=11000: got 500 entries (total: 11500/14888)
+[00:56:51]   Batch offset=11500: got 500 entries (total: 12000/14888)
+[00:57:08]   Batch offset=12000: got 500 entries (total: 12500/14888)
+[00:57:22]   Batch offset=12500: got 500 entries (total: 13000/14888)
+[00:57:38]   Batch offset=13000: got 500 entries (total: 13500/14888)
+[00:57:52]   Batch offset=13500: got 500 entries (total: 14000/14888)
+[00:58:06]   Batch offset=14000: got 500 entries (total: 14500/14888)
+[00:58:22]   Batch offset=14500: got 388 entries (total: 14888/14888)
+[00:58:22]   encounters 2023: 14888 events
+[00:58:22] Starting public-global-encounters-events:latest
+[00:58:33]   Batch offset=0: got 500 entries (total: 500/9444)
+[00:58:45]   Batch offset=500: got 500 entries (total: 1000/9444)
+[00:58:56]   Batch offset=1000: got 500 entries (total: 1500/9444)
+[00:59:01]   Batch offset=1500: got 500 entries (total: 2000/9444)
+[00:59:15]   Batch offset=2000: got 500 entries (total: 2500/9444)
+[00:59:40]   Batch offset=2500: got 500 entries (total: 3000/9444)
+[00:59:46]   Batch offset=3000: got 500 entries (total: 3500/9444)
+[00:59:58]   Batch offset=3500: got 500 entries (total: 4000/9444)
+[01:00:08]   Batch offset=4000: got 500 entries (total: 4500/9444)
+[01:02:28] 
+=== ENCOUNTERS ===
+[01:02:28]   Pulling 2022...
+[01:08:31]   2022: 13782 events
+[01:08:32]   Saved 13782 to /home/rclaw/gemastik/data/raw/gfw/encounters_2022.json.gz (1.0 MB)
+[01:08:33]   Pulling 2023...
+[01:13:57]   2023: 10000 events
+[01:13:58]   Saved 10000 to /home/rclaw/gemastik/data/raw/gfw/encounters_2023.json.gz (0.9 MB)
+[01:13:59]   Pulling 2024...
+[01:15:05]   2024: 2500 events
+[01:15:05]   Saved 2500 to /home/rclaw/gemastik/data/raw/gfw/encounters_2024.json.gz (0.2 MB)
+[01:15:09]   Saved 26282 to /home/rclaw/gemastik/data/raw/gfw/encounters.json.gz (2.1 MB)
+[01:15:09]   TOTAL encounters: 26282
+[01:15:09] 
+=== LOITERING ===
+[01:15:09]   Pulling 2022...
+[01:18:34]   2022: 8500 events
+[01:18:35]   Saved 8500 to /home/rclaw/gemastik/data/raw/gfw/loitering_2022.json.gz (1.7 MB)
+[01:18:36]   Pulling 2023...
+[01:21:01]   2023: 6000 events
+[01:21:01]   Saved 6000 to /home/rclaw/gemastik/data/raw/gfw/loitering_2023.json.gz (1.2 MB)
+[01:21:02]   Pulling 2024...
+[01:33:27] 
+=== LOITERING 2024 ===

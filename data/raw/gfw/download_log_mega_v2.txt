@@ -1,0 +1,113 @@
+[02:51:57] ============================================================
+[02:51:57] GFW MEGA PULL v2 - GET method
+[02:51:57] ============================================================
+[02:51:57] Testing API with encounters (known working)...
+[02:51:58]   Encounters GET: 422 → {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:51:59]   Encounters POST: 403 → {"message":"Not authorized by permissions","error":"Forbidden","statusCode":403}
+[02:51:59]   Port visits GET (no geo): 422 → {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dashes). Upper case, capitalize and underscore are not allowed.","metadata":{}},{"title":"Invalid query 
+[02:52:00]   Port visits GET (with geo): 422 → {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dashes). Upper case, capitalize and underscore are not allowed.","metadata":{}},{"title":"Invalid query 
+[02:52:00]   Fishing events GET (no geo): 422 → {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dashes). Upper case, capitalize and underscore are not allowed.","metadata":{}},{"title":"Invalid query 
+[02:52:00] 
+============================================================
+[02:52:00] === PORT VISITS (public-global-port-visits-events:latest) ===
+[02:52:00] ============================================================
+[02:52:00]   Year 2020...
+[02:52:01]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"endDate is an invalid query param. Available chars must contain lower case characters (plus dashes
+[02:52:01]   2020: 0 events
+[02:52:01]   2020: NO EVENTS or ACCESS DENIED
+[02:52:01]   Year 2021...
+[02:52:02]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:02]   2021: 0 events
+[02:52:02]   2021: NO EVENTS or ACCESS DENIED
+[02:52:02]   Year 2022...
+[02:52:02]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"endDate is an invalid query param. Available chars must contain lower case characters (plus dashes
+[02:52:02]   2022: 0 events
+[02:52:02]   2022: NO EVENTS or ACCESS DENIED
+[02:52:02]   Year 2023...
+[02:52:03]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"endDate is an invalid query param. Available chars must contain lower case characters (plus dashes
+[02:52:03]   2023: 0 events
+[02:52:03]   2023: NO EVENTS or ACCESS DENIED
+[02:52:03]   Year 2024...
+[02:52:03]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:03]   2024: 0 events
+[02:52:03]   2024: NO EVENTS or ACCESS DENIED
+[02:52:03]   Year 2025...
+[02:52:04]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:04]   2025: 0 events
+[02:52:04]   2025: NO EVENTS or ACCESS DENIED
+[02:52:04]   Merged: 0 events → port_visits_indonesia_2020-2025.json.gz
+[02:52:04] 
+============================================================
+[02:52:04] === FISHING EVENTS (public-global-fishing-events:latest) ===
+[02:52:04] ============================================================
+[02:52:04]   Year 2020...
+[02:52:05]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:05]   2020: 0 events
+[02:52:05]   2020: NO EVENTS or ACCESS DENIED
+[02:52:05]   Year 2021...
+[02:52:05]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:05]   2021: 0 events
+[02:52:05]   2021: NO EVENTS or ACCESS DENIED
+[02:52:05]   Year 2022...
+[02:52:06]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:06]   2022: 0 events
+[02:52:06]   2022: NO EVENTS or ACCESS DENIED
+[02:52:06]   Year 2023...
+[02:52:06]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"endDate is an invalid query param. Available chars must contain lower case characters (plus dashes
+[02:52:06]   2023: 0 events
+[02:52:06]   2023: NO EVENTS or ACCESS DENIED
+[02:52:06]   Year 2024...
+[02:52:07]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"endDate is an invalid query param. Available chars must contain lower case characters (plus dashes
+[02:52:07]   2024: 0 events
+[02:52:07]   2024: NO EVENTS or ACCESS DENIED
+[02:52:07]   Year 2025...
+[02:52:08]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:08]   2025: 0 events
+[02:52:08]   2025: NO EVENTS or ACCESS DENIED
+[02:52:08]   Merged: 0 events → fishing_events_indonesia_2020-2025.json.gz
+[02:52:08] 
+============================================================
+[02:52:08] === LOITERING (public-global-loitering-events:latest) ===
+[02:52:08] ============================================================
+[02:52:08]   Year 2020...
+[02:52:08]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:08]   2020: 0 events
+[02:52:08]   2020: NO EVENTS or ACCESS DENIED
+[02:52:08]   Year 2021...
+[02:52:09]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:09]   2021: 0 events
+[02:52:09]   2021: NO EVENTS or ACCESS DENIED
+[02:52:09]   Year 2024...
+[02:52:09]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:09]   2024: 0 events
+[02:52:09]   2024: NO EVENTS or ACCESS DENIED
+[02:52:09]   Year 2025...
+[02:52:10]   HTTP 422 at offset 0: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"Invalid query param","detail":"startDate is an invalid query param. Available chars must contain lower case characters (plus dash
+[02:52:10]   2025: 0 events
+[02:52:10]   2025: NO EVENTS or ACCESS DENIED
+[02:52:10]   Merged: 0 events → loitering_indonesia_2020-2025.json.gz
+[02:52:11]   Saved 14500 → loitering_indonesia_2020-2025.json.gz (2.8 MB)
+[02:52:11] 
+  Loitering merged total: 14500
+[02:52:11] 
+============================================================
+[02:52:11] === AIS GAPS (GET method) ===
+[02:52:11] ============================================================
+[02:52:12]   public-global-ais-gaps-events:latest: 404 → {"statusCode":404,"error":"Not Found","messages":[{"title":"Not Found","detail":"Request failed with status code 404","metadata":{}}]}
+[02:52:14]   public-global-ais-gap-events-v2:latest: 404 → {"statusCode":404,"error":"Not Found","messages":[{"title":"Not Found","detail":"Request failed with status code 404","metadata":{}}]}
+[02:52:14] 
+============================================================
+[02:52:14] FINAL SUMMARY
+[02:52:14] ============================================================
+[02:52:14]   encounters.json.gz: 26282 events, 2.1 MB
+[02:52:14]   encounters_2020.json.gz: 3294 events, 0.3 MB
+[02:52:14]   encounters_2021.json.gz: 4856 events, 0.5 MB
+[02:52:15]   encounters_2022.json.gz: 13782 events, 1.0 MB
+[02:52:15]   encounters_2023.json.gz: 14888 events, 1.3 MB
+[02:52:15]   encounters_2024.json.gz: 9444 events, 0.9 MB
+[02:52:16]   encounters_indonesia_2020-2024.json.gz: 46264 events, 4.0 MB
+[02:52:16]   loitering_2022.json.gz: 8500 events, 1.7 MB
+[02:52:16]   loitering_2023.json.gz: 6000 events, 1.2 MB
+[02:52:17]   loitering_indonesia_2020-2025.json.gz: 14500 events, 2.8 MB
+[02:52:17] 
+DONE!

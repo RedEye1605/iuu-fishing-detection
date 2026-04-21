@@ -1,0 +1,12 @@
+{
+  "download_date": "2026-04-21T10:50:46.882808",
+  "dataset": "public-global-fishing-effort:latest",
+  "spatial": "Indonesia EEZ (ID: 8371)",
+  "spatial_resolution": "LOW",
+  "temporal_resolution": "MONTHLY",
+  "months_requested": 8,
+  "months_successful": 0,
+  "months_failed": 8,
+  "download_method": "curl",
+  "note": "Due to 366-day limit, pulling 1 month per year (January 2018, 2019, 2020, 2021, 2022, 2023, 2024, and April 2025)"
+}

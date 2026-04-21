@@ -1,0 +1,120 @@
+[01:19:31] Testing API connection...
+[01:19:31] Test query: HTTP 422
+[01:19:31] Test error: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"If","detail":"If you send the limit property then the offset property is required"},{"title":"offset","detail":"offset must not be less than 0"}]}
+[01:19:31] 
+============================================================
+[01:19:31] === ENCOUNTERS (public-global-encounters-events:latest) ===
+[01:19:31] ============================================================
+[01:19:31]   Pulling 2020...
+[01:19:32]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:32]   2020: 0 with full bbox, trying WPP715...
+[01:19:33]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:33]   2020: 0 events
+[01:19:33]   Pulling 2021...
+[01:19:33]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:33]   2021: 0 with full bbox, trying WPP715...
+[01:19:34]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:34]   2021: 0 events
+[01:19:34]   Pulling 2022...
+[01:19:34]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:34]   2022: 0 with full bbox, trying WPP715...
+[01:19:47]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:47]   2022: 0 events
+[01:19:47]   Pulling 2023...
+[01:19:48]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:48]   2023: 0 with full bbox, trying WPP715...
+[01:19:50]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:50]   2023: 0 events
+[01:19:50]   Pulling 2024...
+[01:19:50]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:50]   2024: 0 with full bbox, trying WPP715...
+[01:19:51]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:51]   2024: 0 events
+[01:19:51]   NO encounters data found!
+[01:19:51] 
+============================================================
+[01:19:51] === LOITERING (public-global-loitering-events:latest) ===
+[01:19:51] ============================================================
+[01:19:51]   Pulling 2020...
+[01:19:51]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:51]   2020: 0 with full bbox, trying WPP715...
+[01:19:52]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:52]   2020: 0 events
+[01:19:52]   Pulling 2021...
+[01:19:53]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:53]   2021: 0 with full bbox, trying WPP715...
+[01:19:54]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:54]   2021: 0 events
+[01:19:54]   Pulling 2022...
+[01:19:54]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:54]   2022: 0 with full bbox, trying WPP715...
+[01:19:55]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:55]   2022: 0 events
+[01:19:55]   Pulling 2023...
+[01:19:55]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:55]   2023: 0 with full bbox, trying WPP715...
+[01:19:56]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:56]   2023: 0 events
+[01:19:56]   Pulling 2024...
+[01:19:57]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:57]   2024: 0 with full bbox, trying WPP715...
+[01:19:58]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:58]   2024: 0 events
+[01:19:58]   NO loitering data found!
+[01:19:58] 
+============================================================
+[01:19:58] === PORT_VISITS (public-global-port-visits-events:latest) ===
+[01:19:58] ============================================================
+[01:19:58]   Pulling 2020...
+[01:19:59]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:59]   2020: 0 with full bbox, trying WPP715...
+[01:19:59]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:19:59]   2020: 0 events
+[01:19:59]   Pulling 2021...
+[01:20:00]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:20:00]   2021: 0 with full bbox, trying WPP715...
+[01:20:01]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:20:01]   2021: 0 events
+[01:20:01]   Pulling 2022...
+[01:20:03]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:20:03]   2022: 0 with full bbox, trying WPP715...
+[01:20:05]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:20:05]   2022: 0 events
+[01:20:05]   Pulling 2023...
+[01:20:06]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:20:06]   2023: 0 with full bbox, trying WPP715...
+[01:20:07]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:20:07]   2023: 0 events
+[01:20:07]   Pulling 2024...
+[01:20:07]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:20:07]   2024: 0 with full bbox, trying WPP715...
+[01:20:08]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"property","detail":"property geometry should not exist"}]}
+[01:20:08]   2024: 0 events
+[01:20:08]   NO port_visits data found!
+[01:20:08] 
+============================================================
+[01:20:08] === AIS GAPS ===
+[01:20:08] ============================================================
+[01:20:08]   Trying dataset: public-global-ais-gap-events:latest
+[01:20:09]   HTTP 404: {"statusCode":404,"error":"Not Found","messages":[{"title":"Not Found","detail":"Request failed with status code 404","metadata":{}}]}
+[01:20:10]     HTTP 404
+[01:20:10]   Trying dataset: public-global-ais-gaps-events:latest
+[01:20:11]   HTTP 404: {"statusCode":404,"error":"Not Found","messages":[{"title":"Not Found","detail":"Request failed with status code 404","metadata":{}}]}
+[01:20:12]     HTTP 404
+[01:20:12]   Trying dataset: public-global-gap-events:latest
+[01:20:16]   HTTP 404: {"statusCode":404,"error":"Not Found","messages":[{"title":"Not Found","detail":"Request failed with status code 404","metadata":{}}]}
+[01:20:17]     HTTP 404
+[01:20:17]   Trying dataset: carriers-ais-gap-events:latest
+[01:20:18]   HTTP 404: {"statusCode":404,"error":"Not Found","messages":[{"title":"Not Found","detail":"Request failed with status code 404","metadata":{}}]}
+[01:20:19]     HTTP 404
+[01:20:19]   No working AIS gap dataset found!
+[01:20:19] 
+============================================================
+[01:20:19] === FISHING EFFORT ===
+[01:20:19] ============================================================
+[01:20:19]   Testing endpoint: /reports
+[01:20:20]   HTTP 403: {"message":"Not authorized by permissions","error":"Forbidden","statusCode":403}
+[01:20:20]   Testing endpoint: /4wings/report
+[01:20:20]   HTTP 422: {"statusCode":422,"error":"Unprocessable Entity","messages":[{"title":"datasets","detail":"datasets query param is required"}]}
+[01:20:20] 
+Total time: 0.8 minutes

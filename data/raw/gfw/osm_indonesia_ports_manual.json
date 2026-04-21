@@ -1,0 +1,152 @@
+[
+  {
+    "name": "Tanjung Priok (Jakarta)",
+    "lat": -6.1,
+    "lon": 106.8833
+  },
+  {
+    "name": "Tanjung Perak (Surabaya)",
+    "lat": -7.1833,
+    "lon": 112.7833
+  },
+  {
+    "name": "Belawan (Medan)",
+    "lat": 3.7833,
+    "lon": 98.6833
+  },
+  {
+    "name": "Makassar",
+    "lat": -5.1333,
+    "lon": 119.4167
+  },
+  {
+    "name": "Bitung",
+    "lat": 1.4333,
+    "lon": 125.2
+  },
+  {
+    "name": "Sorong",
+    "lat": -0.8833,
+    "lon": 131.25
+  },
+  {
+    "name": "Ambon",
+    "lat": -3.7,
+    "lon": 128.1833
+  },
+  {
+    "name": "Kupang",
+    "lat": -10.1667,
+    "lon": 123.5833
+  },
+  {
+    "name": "Pontianak",
+    "lat": -0.0167,
+    "lon": 109.3333
+  },
+  {
+    "name": "Banjarmasin",
+    "lat": -3.4333,
+    "lon": 114.5833
+  },
+  {
+    "name": "Palembang",
+    "lat": -2.9833,
+    "lon": 104.75
+  },
+  {
+    "name": "Padang",
+    "lat": -0.95,
+    "lon": 100.3667
+  },
+  {
+    "name": "Pekanbaru",
+    "lat": 0.5167,
+    "lon": 101.45
+  },
+  {
+    "name": "Manado",
+    "lat": 1.4833,
+    "lon": 124.8333
+  },
+  {
+    "name": "Batu Ampar (Batam)",
+    "lat": 1.05,
+    "lon": 104.05
+  },
+  {
+    "name": "Panjang (Bandar Lampung)",
+    "lat": -5.1333,
+    "lon": 105.3
+  },
+  {
+    "name": "Semarang",
+    "lat": -6.9667,
+    "lon": 110.4167
+  },
+  {
+    "name": "Benoa (Bali)",
+    "lat": -8.7667,
+    "lon": 115.2167
+  },
+  {
+    "name": "Jayapura",
+    "lat": -2.5333,
+    "lon": 140.7167
+  },
+  {
+    "name": "Biak",
+    "lat": -1.1833,
+    "lon": 136.05
+  },
+  {
+    "name": "Ternate",
+    "lat": 0.7833,
+    "lon": 127.3667
+  },
+  {
+    "name": "Kendari",
+    "lat": -3.9667,
+    "lon": 122.5833
+  },
+  {
+    "name": "Gorontalo",
+    "lat": 0.5333,
+    "lon": 123.0667
+  },
+  {
+    "name": "Tanjung Emas (Semarang)",
+    "lat": -6.9667,
+    "lon": 110.4167
+  },
+  {
+    "name": "Natuna (Ranai)",
+    "lat": 3.95,
+    "lon": 108.35
+  },
+  {
+    "name": "Tarakan",
+    "lat": 3.3,
+    "lon": 117.6
+  },
+  {
+    "name": "Nunukan",
+    "lat": 4.05,
+    "lon": 117.6667
+  },
+  {
+    "name": "Toli-Toli",
+    "lat": 1.0,
+    "lon": 120.8
+  },
+  {
+    "name": "Luwuk",
+    "lat": -0.95,
+    "lon": 122.8
+  },
+  {
+    "name": "Morotai",
+    "lat": 2.3833,
+    "lon": 128.4333
+  }
+]
