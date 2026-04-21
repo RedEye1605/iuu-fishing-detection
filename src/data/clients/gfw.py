@@ -16,15 +16,11 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
 import requests
 
-from src.utils.config import gfw_config, indonesia_config
-
-# Re-export for convenience
 RequestException = requests.RequestException
 
 logger = logging.getLogger(__name__)
@@ -32,16 +28,21 @@ logger = logging.getLogger(__name__)
 API_BASE = "https://api.globalfishingwatch.org/v3"
 GATEWAY_BASE = "https://gateway.api.globalfishingwatch.org/v3"
 
+# Indonesia EEZ configuration
+TOKEN_FILE = Path.home() / ".openclaw" / ".gfw_token"
+EEZ_BOUNDS = {"min_lat": -11.5, "max_lat": 6.5, "min_lon": 95.0, "max_lon": 141.5}
+EEZ_REGION_ID = "8492"
+DEFAULT_OUTPUT = Path("data/raw/gfw")
+
 
 def _load_token() -> str:
     """Load GFW API token from env or file."""
     token = os.environ.get("GFW_API_TOKEN", "")
     if token:
         return token
-    token = gfw_config.load_token()
-    if token:
-        return token
-    logger.error("GFW_API_TOKEN not set and no token file found")
+    if TOKEN_FILE.exists():
+        return TOKEN_FILE.read_text().strip()
+    logger.error("GFW_API_TOKEN not set and no token file found at %s", TOKEN_FILE)
     sys.exit(1)
 
 
@@ -56,10 +57,6 @@ class GFWClient:
     def __init__(self, token: Optional[str] = None) -> None:
         self.token = token or _load_token()
         self.headers = _headers(self.token)
-
-    # ------------------------------------------------------------------
-    # Health check
-    # ------------------------------------------------------------------
 
     def test_connection(self) -> bool:
         """Verify API connectivity and token validity."""
@@ -81,10 +78,6 @@ class GFWClient:
             logger.error("Connection failed: %s", exc)
         return False
 
-    # ------------------------------------------------------------------
-    # Events
-    # ------------------------------------------------------------------
-
     def get_indonesia_fishing_events(
         self,
         start_date: str,
@@ -92,7 +85,6 @@ class GFWClient:
         limit: int = 100,
     ) -> Optional[dict[str, Any]]:
         """Fetch fishing events within the Indonesian EEZ bounding box."""
-        bbox = indonesia_config.eez_bounds
         params: dict[str, Any] = {
             "datasets[]": "public-fishing-event",
             "startDate": start_date,
@@ -100,11 +92,11 @@ class GFWClient:
             "geometry": json.dumps({
                 "type": "Polygon",
                 "coordinates": [[
-                    [bbox["min_lon"], bbox["min_lat"]],
-                    [bbox["max_lon"], bbox["min_lat"]],
-                    [bbox["max_lon"], bbox["max_lat"]],
-                    [bbox["min_lon"], bbox["max_lat"]],
-                    [bbox["min_lon"], bbox["min_lat"]],
+                    [EEZ_BOUNDS["min_lon"], EEZ_BOUNDS["min_lat"]],
+                    [EEZ_BOUNDS["max_lon"], EEZ_BOUNDS["min_lat"]],
+                    [EEZ_BOUNDS["max_lon"], EEZ_BOUNDS["max_lat"]],
+                    [EEZ_BOUNDS["min_lon"], EEZ_BOUNDS["max_lat"]],
+                    [EEZ_BOUNDS["min_lon"], EEZ_BOUNDS["min_lat"]],
                 ]],
             }),
             "limit": limit,
@@ -141,10 +133,6 @@ class GFWClient:
         }
         return self._get(f"{API_BASE}/vessels/{vessel_id}/track", params)
 
-    # ------------------------------------------------------------------
-    # 4Wings reports
-    # ------------------------------------------------------------------
-
     def get_4wings_report(
         self,
         dataset: str,
@@ -156,7 +144,7 @@ class GFWClient:
         body: dict[str, Any] = {
             "region": {
                 "dataset": "public-eez-areas",
-                "id": indonesia_config.eez_region_id,
+                "id": EEZ_REGION_ID,
             }
         }
         params = {
@@ -176,18 +164,17 @@ class GFWClient:
         temporal_resolution: str = "MONTHLY",
     ) -> Optional[dict[str, Any]]:
         """Fetch a 4Wings report using bounding-box spatial filter (fallback)."""
-        bbox = indonesia_config.eez_bounds
         body: dict[str, Any] = {
             "spatial-aggregation": {
                 "type": "bbox",
                 "geojson": {
                     "type": "Polygon",
                     "coordinates": [[
-                        [bbox["min_lon"], bbox["min_lat"]],
-                        [bbox["max_lon"], bbox["min_lat"]],
-                        [bbox["max_lon"], bbox["max_lat"]],
-                        [bbox["min_lon"], bbox["max_lat"]],
-                        [bbox["min_lon"], bbox["min_lat"]],
+                        [EEZ_BOUNDS["min_lon"], EEZ_BOUNDS["min_lat"]],
+                        [EEZ_BOUNDS["max_lon"], EEZ_BOUNDS["min_lat"]],
+                        [EEZ_BOUNDS["max_lon"], EEZ_BOUNDS["max_lat"]],
+                        [EEZ_BOUNDS["min_lon"], EEZ_BOUNDS["max_lat"]],
+                        [EEZ_BOUNDS["min_lon"], EEZ_BOUNDS["min_lat"]],
                     ]],
                 },
             }
@@ -200,10 +187,6 @@ class GFWClient:
             "temporal-resolution": temporal_resolution,
         }
         return self._post(f"{GATEWAY_BASE}/4wings/report", params, body)
-
-    # ------------------------------------------------------------------
-    # Bulk helpers
-    # ------------------------------------------------------------------
 
     def bulk_download_indonesia_data(self, year: int = 2023) -> list[dict[str, Any]]:
         """Download fishing data for Indonesian waters, processed quarterly."""
@@ -224,17 +207,11 @@ class GFWClient:
             else:
                 logger.warning("  Failed to fetch %s %s", year, q)
 
-        output_dir = gfw_config.default_output or Path("data/raw/gfw")
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f"gfw_indonesia_fishing_{year}.json"
+        DEFAULT_OUTPUT.mkdir(parents=True, exist_ok=True)
+        output_file = DEFAULT_OUTPUT / f"gfw_indonesia_fishing_{year}.json"
         output_file.write_text(json.dumps(all_events, indent=2))
         logger.info("Saved %d events to %s", len(all_events), output_file)
         return all_events
-
-    # ------------------------------------------------------------------
-    # Internal HTTP helpers
-    # ------------------------------------------------------------------
 
     def _get(self, url: str, params: dict) -> Optional[dict[str, Any]]:
         """GET request with error handling."""
@@ -265,10 +242,6 @@ class GFWClient:
                 )
         return None
 
-
-# ------------------------------------------------------------------
-# CLI entry-point
-# ------------------------------------------------------------------
 
 def main() -> None:
     """Simple CLI for testing and bulk downloads."""

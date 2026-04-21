@@ -34,38 +34,30 @@ gemastik/
 │   ├── __init__.py
 │   ├── data/
 │   │   ├── __init__.py
-│   │   ├── constants.py           # Shared constants (paths, flags, bbox)
-│   │   ├── pipeline/                    # Data processing pipeline
-│   │   ├── extract.py            # Phase 1: Load & flatten raw data
-│   │   ├── clean.py              # Phase 2: Dedup, validate, normalize
-│   │   ├── features.py           # Phase 3a: Vessel + behavioral features
-│   │   └── enrich.py             # Phase 3b: Cross-source enrichment
-│   ├── clients/                 # API clients
-│   │   ├── gfw.py               # GFW API (events, SAR, effort)
-│   │   └── bps.py               # BPS fisheries statistics
-│   ├── generators/              # Synthetic/sample data generators
-│   │   ├── synthetic.py         # AIS trajectory generator
-│   │   ├── viirs.py             # VIIRS sample data
-│   │   ├── mpa.py               # MPA sample data
-│   │   └── weather.py           # Weather sample data
+│   │   ├── constants.py              # Shared constants (paths, flags, bbox)
+│   │   ├── pipeline/                 # Data processing pipeline
+│   │   │   ├── extract.py            # Phase 1: Load & flatten raw data
+│   │   │   ├── clean.py              # Phase 2: Dedup, validate, normalize
+│   │   │   ├── features.py           # Phase 3a: Vessel + behavioral features
+│   │   │   └── enrich.py             # Phase 3b: Cross-source enrichment
+│   │   └── clients/                  # API clients
+│   │       ├── gfw.py                # GFW API client (events, SAR, effort)
+│   │       └── __init__.py
 │   ├── features/
-│   │   └── graph_builder.py     # ST-GAT graph construction (placeholder)
+│   │   └── graph_builder.py          # ST-GAT graph construction (Phase 5)
 │   ├── models/
-│   │   └── stgat.py             # ST-GAT model architecture (placeholder)
+│   │   └── stgat.py                  # ST-GAT model architecture (Phase 6)
 │   └── utils/
-│       ├── config.py            # Centralized configuration
-│       └── geo.py                # Geospatial utilities
+│       └── __init__.py
 ├── scripts/
-│   ├── run_pipeline.py          # Master pipeline runner (Phase 1-3)
-│   ├── pull_sar_data.py         # GFW 4Wings SAR data puller
-│   └── download_large_data.sh   # Zenodo data download helper
-├── archive/                     # Deprecated script versions
-├── notebooks/                   # Jupyter exploration notebooks
-├── tests/                       # Unit tests
-├── docs/                        # Documentation
-├── data/                        # Raw & processed data (gitignored)
-├── .env.example                 # Environment variable template
-├── pyproject.toml               # Package metadata & dependencies
+│   ├── run_pipeline.py               # Master pipeline runner (Phase 1-3)
+│   ├── pull_sar_data.py              # GFW 4Wings SAR data puller
+│   └── download_large_data.sh        # Zenodo data download helper
+├── docs/                             # Documentation
+├── notebooks/                        # Jupyter exploration notebooks
+├── tests/                            # Unit tests
+├── data/                             # Raw & processed data (gitignored)
+├── pyproject.toml                    # Package metadata & dependencies
 └── README.md
 ```
 

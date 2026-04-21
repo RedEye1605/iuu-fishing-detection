@@ -25,7 +25,6 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from src.data.clients.gfw import GFWClient
-from src.utils.config import app_config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,7 +33,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = app_config.data_root / "raw" / "gfw"
+OUTPUT_DIR = _PROJECT_ROOT / "data" / "raw" / "gfw"
 DATASETS = {
     "sar": "public-global-sar-presence:latest",
     "effort": "public-global-fishing-effort:latest",

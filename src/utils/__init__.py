@@ -1,1 +1,1 @@
-"""Utility modules for IUU fishing detection."""
+"""Utilities for IUU fishing detection."""

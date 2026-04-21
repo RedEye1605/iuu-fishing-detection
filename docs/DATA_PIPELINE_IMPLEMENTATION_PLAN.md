@@ -321,15 +321,8 @@ src/data/
 │   ├── clean.py              # Phase 2: Dedup, validate, normalize
 │   ├── features.py           # Phase 3a: Vessel profile + behavioral features
 │   └── enrich.py             # Phase 3b: Cross-source enrichment
-├── clients/
-│   ├── gfw.py                # GFW API client
-│   └── bps.py                # BPS weather/statistics client
-├── generators/
-│   ├── synthetic.py          # AIS trajectory generator
-│   ├── viirs.py              # VIIRS sample data
-│   ├── mpa.py                # MPA sample data
-│   └── weather.py            # Weather sample data
-└── constants.py              # Shared constants (FLAG_MAP, BBOX, paths)
+└── clients/
+    └── gfw.py                # GFW API client
 
 scripts/
 └── run_pipeline.py           # Master runner: --phase/--step args
