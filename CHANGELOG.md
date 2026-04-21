@@ -118,3 +118,25 @@
 - **Fix:** Applied spatial filter (lat -11.5 to 6.5, lon 95 to 141.5) during raw reprocessing
 - **Result:** 613,325 rows (down from 30M), all confirmed within Indonesian waters
 - 29.5M rows were vessels with relevant flags operating globally (e.g. CHN trawlers near Antarctica)
+
+## v0.6.0 - Full Pipeline Re-run & Validation (2026-04-22)
+
+### Re-run Results
+All 9 pipeline steps re-executed from raw data with all fixes applied.
+
+### Validation Results
+- ✅ Zero column collisions (_x/_y artifacts eliminated)
+- ✅ MMSI type consistent: `large_string` across ALL files
+- ✅ vessel_registry MMSI now string (was int64) — 50.3% fill rate confirmed
+- ✅ Zenodo spatially filtered: 707K rows (was 30M global) — all within Indonesia bbox
+- ✅ No `__index_level_0__` leak in any file
+- ✅ No duplicate event_ids
+- ✅ All coordinates within Indonesia bbox
+- ✅ 121 clean columns in gfw_events_full.parquet
+
+### Final Dataset
+- gfw_events_full.parquet: 512,247 rows × 121 cols × 80.7 MB
+- 14,857 vessels profiled with behavioral features
+- Weather: 100% enriched (8 zones)
+- SAR density + Fishing effort density merged
+- Column naming: clean, no suffixes, no duplicates
