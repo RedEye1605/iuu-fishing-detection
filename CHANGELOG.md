@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.8.0 - Phase 4: IUU Label Generation (2026-04-22)
+
+### New Features
+- **`src/data/pipeline/labels.py`** — IUU indicator computation and label generation
+- 11 IUU indicators across 3 tiers:
+  - Tier 1 (Hard IUU, weight 1.0): fishing_in_mpa, unauthorized_foreign, high_seas_fishing
+  - Tier 2 (Suspicious, weight 0.6): encounter_at_sea, loitering_anomaly, unregistered_vessel, nighttime_foreign
+  - Tier 3 (Behavioral, weight 0.3): high_encounter_rate, high_loitering_rate, far_offshore, rapid_port_cycle
+- Weighted scoring formula: `(tier1_any×1.0 + tier2_count/2×0.6 + tier3_count/2×0.3) / 1.9`
+- 4-class label assignment: normal (24.8%), suspicious (40.1%), probable_iuu (5.3%), hard_iuu (29.8%)
+
+### Output
+- `gfw_events_labeled.parquet`: 512,247 rows × 124 cols (111 base + 11 indicators + iuu_score + iuu_label)
+- `GFW_EVENTS_LABELED` constant added to `constants.py`
+
+### Design Decisions
+- Dropped SAR-AIS cross-match (SAR data only has AIS-equipped vessels, can't detect dark vessels)
+- Dropped AIS gap indicators (no gap data available)
+- Used `authorization_status` from GFW as primary Tier 1 signal
+- Every label is defensible: hard_iuu = fisheries law violations, probable_iuu = transshipment, suspicious = unregistered + encounters
+
 ## v0.7.0 - Weather & VIIRS Removal (2026-04-22)
 
 ### Breaking Changes

@@ -40,6 +40,7 @@ gemastik/
 │   │   │   ├── clean.py              # Phase 2: Dedup, validate, normalize
 │   │   │   ├── features.py           # Phase 3a: Vessel + behavioral features
 │   │   │   └── enrich.py             # Phase 3b: Cross-source enrichment
+│   │   │   └── labels.py             # Phase 4: IUU label generation
 │   │   └── clients/                  # API clients
 │   │       ├── gfw.py                # GFW API client (events, SAR, effort)
 │   │       └── __init__.py
@@ -104,14 +105,40 @@ Zenodo historical effort files are distributed via [GitHub Release](https://gith
 ## 🚀 Running the Pipeline
 
 ```bash
-python scripts/run_pipeline.py              # Run all phases (1-3)
+python scripts/run_pipeline.py              # Run all phases (1-4)
 python scripts/run_pipeline.py --phase 1    # Run only Phase 1
 python scripts/run_pipeline.py --phase 2    # Run only Phase 2
 python scripts/run_pipeline.py --phase 3    # Run only Phase 3
-python scripts/run_pipeline.py --step 3.5   # Run specific step
+python scripts/run_pipeline.py --phase 4    # Run only Phase 4
+python scripts/run_pipeline.py --step 4.1   # Run specific step
 ```
 
 The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runtime: ~15-20 minutes depending on I/O.
+
+---
+
+## 🏷️ IUU Labels
+
+### `data/processed/gfw_events_labeled.parquet`
+- **Rows:** 512,247 events
+- **Columns:** 124
+- **Coverage:** Indonesian waters, 2020–2025
+
+### Label Distribution
+
+| Label | Count | % | Description |
+|-------|-------|---|-------------|
+| **normal** | 127,268 | 24.8% | Low-risk activity |
+| **suspicious** | 205,301 | 40.1% | Unregistered vessels, encounters |
+| **probable_iuu** | 26,978 | 5.3% | Transshipment indicators |
+| **hard_iuu** | 152,700 | 29.8% | Fisheries law violations |
+
+### Scoring: 11 indicators across 3 tiers
+- **Tier 1 (weight 1.0):** Fishing in MPA, unauthorized foreign, high seas
+- **Tier 2 (weight 0.6):** Encounters, loitering, unregistered, nighttime foreign
+- **Tier 3 (weight 0.3):** High encounter/loitering rate, far offshore, rapid port cycle
+
+Score normalized to [0, 1]; threshold-based label assignment.
 
 ---
 
@@ -129,7 +156,8 @@ The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runti
 
 | File | Rows | Cols | Description |
 |------|------|------|-------------|
-| `gfw_events_full.parquet` | 512,247 | 111 | **Final enriched events** |
+| `gfw_events_full.parquet` | 512,247 | 111 | **Enriched events (pre-label)** |
+| `gfw_events_labeled.parquet` | 512,247 | 124 | **Final labeled events (for ML)** |
 | `gfw_events_clean.parquet` | 512,247 | 66 | Cleaned events (pre-enrichment) |
 | `gfw_events_flat.parquet` | 512,272 | 54 | Raw flattened events |
 | `vessel_behavioral_features.parquet` | 14,857 | 32 | Per-vessel behavioral profiles |
@@ -181,6 +209,7 @@ The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runti
 - [x] Phase 1: Load & Flatten (all sources → Parquet)
 - [x] Phase 2: Clean & Validate (dedup, flag standardize, outliers)
 - [x] Phase 3: Feature Engineering (vessel profiles, behavioral, enrichment)
+- [x] Phase 4: IUU Label Generation (11 indicators, 4-class labels)
 - [x] Full pipeline audit and bug fixes
 - [x] Documentation updated to match implementation
 

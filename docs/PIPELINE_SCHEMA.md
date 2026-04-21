@@ -13,6 +13,17 @@ All output files are in `data/processed/`. Schemas verified from actual parquet 
 
 ## Final Output
 
+### `gfw_events_labeled.parquet` (512,247 rows × 124 cols) ← FINAL
+The master labeled events table used for ML training.
+
+All 111 columns from `gfw_events_full.parquet` plus:
+
+**IUU Indicators (11 booleans):** `ind_fishing_in_mpa` (bool), `ind_unauthorized_foreign` (bool), `ind_high_seas_fishing` (bool), `ind_encounter_at_sea` (bool), `ind_loitering_anomaly` (bool), `ind_unregistered_vessel` (bool), `ind_nighttime_foreign` (bool), `ind_high_encounter_rate` (bool), `ind_high_loitering_rate` (bool), `ind_far_offshore` (bool), `ind_rapid_port_cycle` (bool)
+
+**IUU Score & Label (2):** `iuu_score` (f64, range [0, 1]), `iuu_label` (str: normal|suspicious|probable_iuu|hard_iuu)
+
+---
+
 ### `gfw_events_full.parquet` (512,247 rows × 111 cols)
 The master enriched events table used for modeling.
 

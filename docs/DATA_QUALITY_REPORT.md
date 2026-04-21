@@ -1,7 +1,7 @@
 # Data Quality Report
 
 **Date:** 2026-04-22
-**Pipeline Version:** v0.6.0
+**Pipeline Version:** v0.8.0
 **Scope:** All `data/processed/` parquet files
 
 ---
@@ -10,9 +10,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Total files | 12 parquet files |
+| Total files | 13 parquet files |
 | Total rows | ~4.5M across all files |
-| Final dataset | 512,247 rows × 111 cols |
+| Final dataset | 512,247 rows × 124 cols |
+| IUU labels | 4 classes (normal 24.8%, suspicious 40.1%, probable_iuu 5.3%, hard_iuu 29.8%) |
 | MMSI type consistency | ✅ `large_string` everywhere |
 | Coordinate validity | ✅ 100% within Indonesia bbox |
 | Duplicate event_ids | ✅ 0 |
@@ -173,7 +174,46 @@ The **50.3% fill rate** reported in the pipeline refers to the percentage of eve
 
 ---
 
-## 6. ML Readiness Assessment
+## 6. IUU Label Quality
+
+### `gfw_events_labeled.parquet` — FINAL OUTPUT
+- **Rows:** 512,247 | **Cols:** 124
+- **New columns:** 11 `ind_*` booleans + `iuu_score` (f64) + `iuu_label` (str)
+
+### Label Distribution
+
+| Label | Count | % | Threshold |
+|-------|-------|---|---------- |
+| normal | 127,268 | 24.8% | score < 0.15 |
+| suspicious | 205,301 | 40.1% | 0.15 ≤ score < 0.3 |
+| probable_iuu | 26,978 | 5.3% | 0.3 ≤ score < 0.5 |
+| hard_iuu | 152,700 | 29.8% | score ≥ 0.5 |
+
+### Indicator Prevalence
+
+| Indicator | Events | % | Tier |
+|-----------|--------|---|------|
+| ind_fishing_in_mpa | 287 | 0.06% | 1 |
+| ind_unauthorized_foreign | 140,912 | 27.5% | 1 |
+| ind_high_seas_fishing | 11,768 | 2.3% | 1 |
+| ind_encounter_at_sea | 46,239 | 9.0% | 2 |
+| ind_loitering_anomaly | 87,661 | 17.1% | 2 |
+| ind_unregistered_vessel | 98,823 | 19.3% | 2 |
+| ind_nighttime_foreign | 70,217 | 13.7% | 2 |
+| ind_high_encounter_rate | 127,639 | 24.9% | 3 |
+| ind_high_loitering_rate | 128,019 | 25.0% | 3 |
+| ind_far_offshore | 50,684 | 9.9% | 3 |
+| ind_rapid_port_cycle | 2,904 | 0.6% | 3 |
+
+### Key Observations
+- Tier 1 dominated by `unauthorized_foreign` (92.3% of hard_iuu)
+- Labels are defensible: hard_iuu = fisheries law violations, probable_iuu = transshipment indicators
+- Class distribution is workable for multi-class classification (no single class dominates)
+- IUU score is continuous — can be used for regression or threshold tuning
+
+---
+
+## 7. ML Readiness Assessment
 
 ### Features Ready for ML (as-is)
 - 82 columns with 0% null — directly usable after encoding
@@ -212,7 +252,7 @@ The **50.3% fill rate** reported in the pipeline refers to the percentage of eve
 
 ---
 
-## 7. Known Issues & Mitigations
+## 8. Known Issues & Mitigations
 
 | Issue | Impact | Mitigation |
 |-------|--------|------------|
@@ -225,7 +265,7 @@ The **50.3% fill rate** reported in the pipeline refers to the percentage of eve
 
 ---
 
-## 8. Data Lineage
+## 9. Data Lineage
 
 ```
 Raw Data → Phase 1 (Load) → Phase 2 (Clean) → Phase 3 (Features) → Final
@@ -238,4 +278,4 @@ All steps are deterministic and reproducible via `python scripts/run_pipeline.py
 ---
 
 *Report generated: 2026-04-22*
-*Pipeline version: v0.6.0*
+*Pipeline version: v0.8.0*

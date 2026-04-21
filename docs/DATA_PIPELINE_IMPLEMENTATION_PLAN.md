@@ -3,8 +3,8 @@
 ## IUU Fishing Detection — From Raw Data to Training-Ready
 
 > **Goal:** Transform all raw data sources into a unified, clean, feature-rich dataset ready for ST-GAT model training.
-> **Status:** Phases 1–3 complete and validated (2026-04-22). Phases 4–6 are TODO.
-> **Output:** `data/processed/` with 12 Parquet files; final: `gfw_events_full.parquet` (512K rows, 111 cols)
+> **Status:** Phases 1–4 complete and validated (2026-04-22). Phases 5–6 are TODO.
+> **Output:** `data/processed/` with 13 Parquet files; final: `gfw_events_labeled.parquet` (512K rows, 124 cols)
 
 ---
 
@@ -211,7 +211,14 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ## Final Dataset Summary
 
-### `gfw_events_full.parquet` — 512,247 rows × 111 cols
+### `gfw_events_full.parquet` — 512,247 rows × 111 cols (pre-label)
+
+### `gfw_events_labeled.parquet` — 512,247 rows × 124 cols (FINAL)
+
+Same as `gfw_events_full.parquet` plus 13 new columns:
+- 11 indicator booleans: `ind_fishing_in_mpa`, `ind_unauthorized_foreign`, `ind_high_seas_fishing`, `ind_encounter_at_sea`, `ind_loitering_anomaly`, `ind_unregistered_vessel`, `ind_nighttime_foreign`, `ind_high_encounter_rate`, `ind_high_loitering_rate`, `ind_far_offshore`, `ind_rapid_port_cycle`
+- `iuu_score` (f64): Continuous score [0, 1]
+- `iuu_label` (str): Categorical — normal / suspicious / probable_iuu / hard_iuu
 
 | Category | Columns | Count |
 |----------|---------|-------|
@@ -254,20 +261,56 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ---
 
-## Phase 4: Label Generation — TODO
+## Phase 4: IUU Label Generation ✅ COMPLETE
 
-Not yet implemented. Original plan:
+**Script:** `src/data/pipeline/labels.py`
+**Input:** `gfw_events_full.parquet` (512,247 rows × 111 cols)
+**Output:** `gfw_events_labeled.parquet` (512,247 rows × 124 cols)
 
-### Step 4.1: IUU Label Definition
-Multi-signal IUU scoring:
-- **Tier 1 (Hard IUU):** Fishing in MPA, foreign vessel in EEZ, AIS gap + SAR detection
-- **Tier 2 (Probable IUU):** Encounter at sea + transshipment, repeated AIS gaps, unregistered vessel
-- **Tier 3 (Suspicious):** Nighttime fishing + near border, unusual patterns
+### Step 4.1: 11 IUU Indicators across 3 Tiers ✅
 
-### Step 4.2: SAR-AIS Cross-Matching
-Detect "dark vessels" by comparing SAR detections against AIS data within ±6h and ±5km.
+**Tier 1 — Hard IUU (weight 1.0):**
+- `ind_fishing_in_mpa`: Fishing inside no-take MPA (287 events, 0.06%)
+- `ind_unauthorized_foreign`: Foreign vessel fishing in EEZ without authorization (140,912 events, 27.5%)
+- `ind_high_seas_fishing`: Fishing outside any EEZ (11,768 events, 2.3%)
 
-**Blocker:** `potential_risk` flag is only 0.4% True — class imbalance will be severe. May need anomaly detection approach instead of supervised classification.
+**Tier 2 — Suspicious Activity (weight 0.6):**
+- `ind_encounter_at_sea`: Vessel-to-vessel encounter (46,239 events, 9.0%)
+- `ind_loitering_anomaly`: Loitering with avg speed < 1 knot (87,661 events, 17.1%)
+- `ind_unregistered_vessel`: Fishing vessel with no registry match (98,823 events, 19.3%)
+- `ind_nighttime_foreign`: Foreign vessel fishing at night (70,217 events, 13.7%)
+
+**Tier 3 — Behavioral Anomaly (weight 0.3):**
+- `ind_high_encounter_rate`: Vessel encounter rate > p75 (127,639 events)
+- `ind_high_loitering_rate`: Vessel loitering rate > p75 (128,019 events)
+- `ind_far_offshore`: Operating > p90 distance from shore (50,684 events)
+- `ind_rapid_port_cycle`: Port visit < 2 hours (2,904 events)
+
+### Step 4.2: Scoring Formula ✅
+
+Score = (tier1_any × 1.0 + tier2_count/2 × 0.6 + tier3_count/2 × 0.3) / 1.9
+
+Normalized to [0, 1]. Division by 1.9 is the theoretical maximum.
+
+### Step 4.3: Label Assignment ✅
+
+| Label | Threshold | Count | % |
+|-------|-----------|-------|---|
+| normal | score < 0.15 | 127,268 | 24.8% |
+| suspicious | 0.15–0.3 | 205,301 | 40.1% |
+| probable_iuu | 0.3–0.5 | 26,978 | 5.3% |
+| hard_iuu | ≥ 0.5 | 152,700 | 29.8% |
+
+### Key Design Decisions
+
+- **Dropped SAR-AIS cross-match:** SAR data only has AIS-equipped vessels — cannot detect "dark vessels" (original plan assumption was wrong)
+- **Dropped AIS gap indicators:** No AIS gap data available in GFW datasets
+- **Used `authorization_status` from GFW** as primary signal for Tier 1 (unauthorized foreign)
+- **Tier 1 dominated by `unauthorized_foreign`** (92.3% of hard_iuu labels)
+- **Every label is defensible:** hard_iuu = violations of fisheries law, probable_iuu = extreme loitering (transshipment), suspicious = unregistered vessels + encounters
+
+### Constants Added
+- `GFW_EVENTS_LABELED = "gfw_events_labeled.parquet"` in `constants.py`
 
 ---
 
@@ -318,7 +361,8 @@ src/data/
 │   ├── extract.py            # Phase 1: Load & flatten all raw data
 │   ├── clean.py              # Phase 2: Dedup, validate, normalize
 │   ├── features.py           # Phase 3a: Vessel profile + behavioral features
-│   └── enrich.py             # Phase 3b: Cross-source enrichment
+│   ├── enrich.py             # Phase 3b: Cross-source enrichment
+│   └── labels.py             # Phase 4: IUU indicator + label generation
 └── clients/
     └── gfw.py                # GFW API client
 
@@ -338,7 +382,7 @@ scripts/
 | `df.apply()` for sea_zone | `np.select()` vectorized | 100x faster on 512K rows |
 | Lambda for unique_grid_cells | Two-stage groupby | Original lambda was buggy |
 | Steps 3.2-3.3 separate | Already done in Phase 2 | Temporal features added during cleaning |
-| 124 columns (audit) | 111 columns (final) | Weather (7) + VIIRS (3) removed in v0.7.0; 3 cols removed during collision fix |
+| 124 columns (audit) | 111 columns (final) | Weather (7) + VIIRS (3) removed in v0.7.0; 3 cols removed during collision fix. Phase 4 adds 13 cols → 124 final |
 
 ---
 
