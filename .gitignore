@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Data files (too large for GitHub)
+data/raw/
+*.csv
+*.zip
+*.gz
+*.tar.gz
+*.parquet
+*.feather
+*.pkl
+*.pickle
+
+# Models (large binary)
+*.pt
+*.pth
+*.onnx
+*.bin
+*.safetensors
+models/trained/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Env
+.env
+
+# Logs
+*.log
