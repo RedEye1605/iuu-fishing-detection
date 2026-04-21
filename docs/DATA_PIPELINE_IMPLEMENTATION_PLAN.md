@@ -4,7 +4,7 @@
 
 > **Goal:** Transform all raw data sources into a unified, clean, feature-rich dataset ready for ST-GAT model training.
 > **Status:** Phases 1–3 complete and validated (2026-04-22). Phases 4–6 are TODO.
-> **Output:** `data/processed/` with 14 Parquet files; final: `gfw_events_full.parquet` (512K rows, 121 cols)
+> **Output:** `data/processed/` with 12 Parquet files; final: `gfw_events_full.parquet` (512K rows, 111 cols)
 
 ---
 
@@ -24,6 +24,9 @@
 | 8 | Zenodo Monthly Effort | `zenodo/fleet-monthly-csvs-10-v3-{year}.zip` | ~607 MB | CSV (zipped) |
 | 9 | BMKG Weather | `bmkg/marine_weather_2024.csv` | 2,921 | CSV |
 | 10 | VIIRS Detections | `viirs/sample_vbd_detections_2024.csv` | 5,001 | CSV |
+
+> **Note:** BMKG weather and VIIRS detection raw files exist in `data/raw/` but were **removed from the pipeline** in v0.7.0 due to insufficient coverage and signal. They are listed here for historical reference.
+
 | 11 | Indonesia Ports | `gfw/osm_indonesia_ports_manual.json` | 30 | JSON |
 
 **Note:** EEZ shapefiles (`gis/eez_v12_lowres.gpkg`) and MPA boundaries (`gis/indonesia_mpa_sample.geojson`) exist but were **not used** in the pipeline. No spatial join was performed — EEZ/MPA info comes from GFW's `regions` field directly.
@@ -39,10 +42,10 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 │ GFW SAR JSON     │──────┤      │ Null handling    │──────┤      │ Spatial Features│
 │ GFW Effort JSON  │──────┼────► │ Type casting     │──────┼────► │ Temporal Features│
 │ Zenodo CSV       │──────┤      │ Coordinate valid.│──────┤      │ Behavioral Flags│
-│ Weather CSV      │──────┤      │ Date normalization│──────┤      │ Cross-source    │
-│ VIIRS CSV        │──────┤      │ Flag standardize │──────┤      │ Enrichment      │
-│ Ports JSON       │──────┘      │ Outlier capping  │──────┘      │                 │
-└─────────────────┘              └─────────────────┘              └─────────────────┘
+│ Ports JSON       │──────┘      │ Date normalization│──────┤      │ Cross-source    │
+└─────────────────┘              │ Flag standardize │──────┤      │ Enrichment      │
+                                 │ Outlier capping  │──────┘      │                 │
+                                 └─────────────────┘              └─────────────────┘
        ↓                                ↓                                ↓
   *_flat.parquet                 *_clean.parquet              gfw_events_full.parquet
 ```
@@ -108,15 +111,15 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 **Difference from original plan:** Plan said "filter to Indonesia-related records (flag=IDN or coordinates in Indonesian EEZ)". Actual implementation filters by bbox only, which is more correct — captures foreign vessels in Indonesian waters.
 
-### Step 1.5: Weather, VIIRS, Ports ✅
+### Step 1.5: Ports ✅
 
 **Script:** `src/data/pipeline/extract.py`
 **Output:**
-- `weather.parquet` (2,920 rows × 9 cols) — lat/lon are int64 (zone centers)
-- `viirs_detections.parquet` (5,000 rows × 8 cols) — `date_gmt` is int64 (parsed later)
 - `ports.parquet` (30 rows × 3 cols)
 
-**Validation:** All files load cleanly, types match schema.
+`extract_auxiliary()` has been renamed to `extract_ports()` — it only loads port data now. Weather and VIIRS loading was removed in v0.7.0.
+
+**Validation:** File loads cleanly, types match schema.
 
 ---
 
@@ -194,23 +197,21 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 ### Step 3.5: Cross-Source Enrichment ✅
 
 **Script:** `src/data/pipeline/enrich.py`
-**Output:** `gfw_events_full.parquet` (512,247 rows × 121 cols, 80.7 MB)
+**Output:** `gfw_events_full.parquet` (512,247 rows × 111 cols)
 
 **Actions performed:**
-- **Weather:** Enriched via zone-based matching (all 8 weather zones). Weather columns prefixed `weather_`: lon, lat, wind_speed_knots, wave_height_m, sea_surface_temp_c, visibility_km, precipitation_mm
-- **VIIRS:** Date-corrected join (`pd.to_datetime(str, format="%Y%m%d")`). Low match rate — VIIRS is sample data (5K rows, 2024 only)
 - **SAR density:** Grid-cell/monthly detection counts → `sar_total_detections`, `sar_unique_vessels`
 - **Fishing effort density:** Grid-cell/monthly fishing hours → `effort_hours_in_cell`, `effort_vessels_in_cell`
 - **Behavioral features:** Merged per vessel from step 3.4
 - **Column collisions eliminated:** No `_x/_y` suffixes in final output
 
-**Difference from original plan:** Plan described weather as "nearest-neighbor join on (date, nearest grid cell)". Actual uses zone-based monthly averages (8 zones × 365 days). VIIRS date parsing was fixed from broken int64 comparison to proper `pd.to_datetime()` conversion.
+**Removed in v0.7.0:** Weather enrichment (7 cols) and VIIRS enrichment (3 cols) were removed due to insufficient coverage and signal.
 
 ---
 
 ## Final Dataset Summary
 
-### `gfw_events_full.parquet` — 512,247 rows × 121 cols
+### `gfw_events_full.parquet` — 512,247 rows × 111 cols
 
 | Category | Columns | Count |
 |----------|---------|-------|
@@ -221,8 +222,6 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 | Speed | avg_speed_knots, implied_speed_knots, speed_outlier | 3 |
 | Registry | reg_vessel_class through tonnage_per_length | ~9 |
 | Spatial | grid_lat, grid_lon, sea_zone, nearest_port_* | ~6 |
-| Weather | weather_lon through weather_precipitation_mm | 7 |
-| VIIRS | viirs_count, viirs_avg_radiance, viirs_detection_nearby | 3 |
 | SAR/Effort density | sar_total_detections, effort_hours_in_cell | 4 |
 | Behavioral | total_events through avg_fishing_hours_per_trip | ~32 |
 
@@ -230,7 +229,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 - ✅ 100% coordinates within Indonesia bbox
 - ✅ 0 duplicate event_ids
 - ✅ MMSI `large_string` type consistent across all files
-- ✅ 82/121 columns have 0% null
+- ✅ 75/111 columns have 0% null
 - ✅ 28 columns >50% null (event-type specific — expected)
 - ✅ 0 column name collisions (_x/_y eliminated)
 - ✅ No `__index_level_0__` index leak
@@ -302,11 +301,10 @@ Detect "dark vessels" by comparing SAR detections against AIS data within ±6h a
 | Issue | Impact | Mitigation |
 |-------|--------|------------|
 | Registry fill rate 50.3% | Missing vessel characteristics for ~half of vessels | Use SAR cross-matching as alternative signal |
-| Weather data only 2024 | Historical events lack weather enrichment | Use Open-Meteo historical API for backfill |
-| VIIRS is sample data (5K) | Limited VIIRS enrichment, low match rate | Focus on SAR + AIS as primary signals |
 | No EEZ/MPA spatial join | Uses GFW's region fields instead of shapefile join | GFW regions data is reliable for Indonesia |
 | `potential_risk` only 0.4% | Severe class imbalance for supervised learning | Consider anomaly detection or semi-supervised approach |
 | 30 ports only | Limited nearest-port coverage for all of Indonesia | Add more ports from OSM/GFW |
+| Raw weather/VIIRS data excluded | BMKG (2024 only, 20% coverage) and VIIRS (5K sample, 0.01% signal) removed in v0.7.0 | Focus on SAR + AIS as primary signals |
 | Zenodo 2021 zip was corrupted | Had to re-download | Fixed, data verified |
 
 ---
@@ -336,13 +334,11 @@ scripts/
 |---------|--------|--------|
 | MMSI as int in registry | MMSI as string everywhere | GFW uses string ssvid; join compatibility |
 | Zenodo filtered by flag | Zenodo filtered by bbox | 30M global rows; flag filter missed foreign vessels in IDN waters |
-| 4 weather zones | 8 weather zones | BMKG data has 8 zones; mapping was too coarse |
 | EEZ/MPA spatial join | GFW regions field | No usable shapefiles available at time of implementation |
-| VIIRS date as datetime | VIIRS date_gmt as int64, parsed manually | Raw data format; `pd.to_datetime(str, format="%Y%m%d")` |
 | `df.apply()` for sea_zone | `np.select()` vectorized | 100x faster on 512K rows |
 | Lambda for unique_grid_cells | Two-stage groupby | Original lambda was buggy |
 | Steps 3.2-3.3 separate | Already done in Phase 2 | Temporal features added during cleaning |
-| 124 columns (audit) | 121 columns (final) | 3 columns removed/merged during collision fix |
+| 124 columns (audit) | 111 columns (final) | Weather (7) + VIIRS (3) removed in v0.7.0; 3 cols removed during collision fix |
 
 ---
 

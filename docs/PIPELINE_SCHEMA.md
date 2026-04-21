@@ -13,8 +13,8 @@ All output files are in `data/processed/`. Schemas verified from actual parquet 
 
 ## Final Output
 
-### `gfw_events_full.parquet` (512,247 rows × 121 cols)
-The master enriched events table used for modeling. 80.7 MB.
+### `gfw_events_full.parquet` (512,247 rows × 111 cols)
+The master enriched events table used for modeling.
 
 **Core (12):** `event_id` (str), `event_type` (str), `start_time` (ts UTC), `end_time` (ts UTC), `lat` (f64), `lon` (f64), `bbox_minlon` (f64), `bbox_minlat` (f64), `bbox_maxlon` (f64), `bbox_maxlat` (f64), `mmsi` (str), `duration_hours` (f64)
 
@@ -48,10 +48,6 @@ The master enriched events table used for modeling. 80.7 MB.
 
 **Spatial (5):** `grid_lat` (f64), `grid_lon` (f64), `nearest_port_name` (str), `nearest_port_dist_km` (f64), `sea_zone` (str)
 
-**Weather (7):** `weather_lon` (f64), `weather_lat` (f64), `weather_wind_speed_knots` (f64), `weather_wave_height_m` (f64), `weather_sea_surface_temp_c` (f64), `weather_visibility_km` (f64), `weather_precipitation_mm` (f64)
-
-**VIIRS (3):** `viirs_count` (i64), `viirs_avg_radiance` (f64), `viirs_detection_nearby` (bool)
-
 **SAR/Effort (4):** `sar_total_detections` (f64), `sar_unique_vessels` (i64), `effort_hours_in_cell` (f64), `effort_vessels_in_cell` (i64)
 
 **Behavioral (22):** `total_events` (i64), `first_seen` (ts UTC), `last_seen` (ts UTC), `tracking_span_days` (f64), `fishing_count` (i64), `encounter_count` (i64), `loitering_count` (i64), `port_visit_count` (i64), `avg_fishing_duration` (f64), `total_fishing_hours` (f64), `avg_fishing_distance` (f64), `fishing_lat_mean` (f64), `fishing_lon_mean` (f64), `avg_distance_shore` (f64), `max_distance_shore` (i64), `spatial_range_km` (f64), `unique_grid_cells` (i64), `speed_std` (f64), `encounters_total` (i64), `encounters_with_foreign` (i64), `loitering_events` (i64), `total_loitering_hours` (f64), `port_visits` (i64), `avg_port_duration` (f64), `encounter_rate` (f64), `loitering_rate` (f64), `fishing_ratio` (f64), `avg_fishing_hours_per_trip` (f64)
@@ -84,12 +80,6 @@ Same schema as fishing_effort_clean, with `detections` (i64) instead of `fishing
 
 ### `zenodo_effort_clean.parquet` (707,118 rows × 12 cols)
 `date` (str), `year` (i64), `month` (i64), `cell_ll_lat` (f64), `cell_ll_lon` (f64), `flag` (str), `geartype` (str), `hours` (f64), `fishing_hours` (f64), `mmsi_present` (i64), `is_domestic` (bool), `season` (str)
-
-### `weather.parquet` (2,920 rows × 9 cols)
-`date` (str), `zone` (str), `lon` (i64), `lat` (i64), `wind_speed_knots` (f64), `wave_height_m` (f64), `sea_surface_temp_c` (f64), `visibility_km` (f64), `precipitation_mm` (f64)
-
-### `viirs_detections.parquet` (5,000 rows × 8 cols)
-`id` (i64), `date_gmt` (i64), `time_gmt` (i64), `lon` (f64), `lat` (f64), `quality_flag` (i64), `radiance` (f64), `zone` (str)
 
 ### `ports.parquet` (30 rows × 3 cols)
 `name` (str), `lat` (f64), `lon` (f64)

@@ -55,8 +55,6 @@
 | `fishing_effort_flat.parquet` | 890,411 | 13 | AIS-based fishing effort estimates |
 | `vessel_registry.parquet` | 147,924 | 12 | Zenodo vessel registry (MMSI as string) |
 | `zenodo_effort_flat.parquet` | 707,118 | 10 | Grid-level fishing effort (spatially filtered to IDN bbox) |
-| `weather.parquet` | 2,920 | 9 | BMKG marine weather (8 zones) |
-| `viirs_detections.parquet` | 5,000 | 8 | VIIRS boat detection samples |
 | `ports.parquet` | 30 | 3 | Indonesia port locations (OSM) |
 
 ---
@@ -69,6 +67,6 @@ All Phase 1 issues from the original audit have been resolved:
 |-------|--------|-----|
 | MMSI int64 in vessel_registry | ✅ Fixed | Cast to string in pipeline/extract.py |
 | Zenodo 30M rows (global, unfiltered) | ✅ Fixed | Spatial bbox filter applied during load |
-| VIIRS date_gmt int64 | ✅ Fixed | Parsed with `pd.to_datetime(str, format="%Y%m%d")` |
-| Weather only 4 zones mapped | ✅ Fixed | All 8 zones mapped in enrichment |
+| VIIRS date_gmt int64 | ✅ Fixed → Later removed | VIIRS enrichment removed in v0.7.0 (0.01% signal) |
+| Weather only 4 zones mapped | ✅ Fixed → Later removed | Weather enrichment removed in v0.7.0 (insufficient coverage) |
 | __index_level_0__ leak in zenodo | ✅ Fixed | `index=False` safeguard in ParquetWriter |

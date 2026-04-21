@@ -11,9 +11,9 @@
 |---|---|
 | **Overall Status** | ✅ PASS |
 | **Pipeline Completeness** | Phases 1–3 complete, validated, reproducible |
-| **Final Dataset** | 512,247 rows × 121 cols × 80.7 MB |
+| **Final Dataset** | 512,247 rows × 111 cols |
 | **Critical Issues** | 0 (all 4 resolved) |
-| **Remaining Warnings** | 6 (non-blocking) |
+| **Remaining Warnings** | 4 (non-blocking) |
 
 All critical issues from the initial audit have been resolved. The pipeline produces a clean, validated dataset with consistent types, no collisions, and verified data quality. Remaining warnings are inherent data limitations (sample sizes, temporal coverage) that don't affect pipeline correctness.
 
@@ -25,18 +25,18 @@ Full pipeline re-run from raw data with all fixes applied:
 
 | Check | Result |
 |-------|--------|
-| MMSI type consistency | ✅ `large_string` in ALL 14 parquet files |
+| MMSI type consistency | ✅ `large_string` in ALL 12 parquet files |
 | Duplicate event_ids | ✅ 0 duplicates |
 | Coordinate validity | ✅ 100% within Indonesia bbox |
 | Column name collisions | ✅ 0 `_x/_y` suffix artifacts |
 | Index leaks | ✅ No `__index_level_0__` in any file |
 | Zenodo spatial filter | ✅ 707K rows, all within bbox |
 | Registry join | ✅ 50.3% fill rate (1,598 MMSIs matched) |
-| Weather enrichment | ✅ All 8 zones mapped |
-| VIIRS date parsing | ✅ Proper datetime conversion |
+| Weather enrichment | Removed in v0.7.0 | Insufficient coverage (2024 only, 20%) |
+| VIIRS date parsing | Removed in v0.7.0 | Insufficient signal (0.01% match rate) |
 
 ### Column Null Analysis (gfw_events_full.parquet)
-- 82/121 columns: 0% null
+- 75/111 columns: 0% null
 - 11 columns: <10% null
 - 28 columns: >50% null (event-type specific — e.g., `port_name` is null for non-port events)
 - Weather columns: minimal nulls after zone-based enrichment
@@ -59,7 +59,7 @@ Full pipeline re-run from raw data with all fixes applied:
 ## 3. Data Quality Report
 
 ### 3.1 `gfw_events_full.parquet` (FINAL)
-**Rows:** 512,247 | **Cols:** 121 | **Size:** 80.7 MB
+**Rows:** 512,247 | **Cols:** 111
 
 | Check | Finding | Status |
 |---|---|---|
@@ -68,7 +68,6 @@ Full pipeline re-run from raw data with all fixes applied:
 | MMSI type | `large_string` consistent | ✅ |
 | Column collisions | None | ✅ |
 | Event-type nulls | Expected pattern (port cols null for fishing, etc.) | ✅ |
-| Weather enrichment | All 8 zones covered | ✅ |
 | Registry fill rate | 50.3% (real data limitation) | ⚠️ |
 
 ### 3.2 `vessel_registry.parquet`
@@ -89,21 +88,11 @@ Full pipeline re-run from raw data with all fixes applied:
 | vessel_flag nulls | 29.2% null | ⚠️ |
 | avg_fishing_duration nulls | 85.8% null (expected — many non-fishing vessels) | ✅ |
 
-### 3.4 `weather.parquet`
-**Rows:** 2,920 | **Cols:** 9
+### ~~3.4 `weather.parquet`~~ — REMOVED in v0.7.0
+Weather enrichment removed due to insufficient temporal coverage (2024 only, 20% of events).
 
-| Check | Finding | Status |
-|---|---|---|
-| lat/lon type | `int64` (zone centers) | ⚠️ Acceptable for zone matching |
-| Coverage | 8 zones, 365 days, 2024 only | ⚠️ |
-
-### 3.5 `viirs_detections.parquet`
-**Rows:** 5,000 | **Cols:** 8
-
-| Check | Finding | Status |
-|---|---|---|
-| date_gmt type | `int64` (parsed downstream) | ✅ Fixed in enrichment |
-| Sample size | 5,000 rows only | ⚠️ Sample data |
+### ~~3.5 `viirs_detections.parquet`~~ — REMOVED in v0.7.0
+VIIRS enrichment removed due to insufficient signal (5K sample rows, 0.01% match rate: 65/512K events).
 
 ### 3.6 `zenodo_effort_clean.parquet`
 **Rows:** 707,118 | **Cols:** 12
@@ -145,11 +134,11 @@ The following critical issues were identified in the initial audit and have been
 
 3. **`__index_level_0__` column in zenodo** — Fixed: `index=False` safeguard in clean.py ParquetWriter. Verified absent.
 
-4. **VIIRS date join failure** — Fixed: `pd.to_datetime(viirs["date_gmt"].astype(str), format="%Y%m%d").dt.date` for proper date comparison.
+4. **VIIRS date join failure** — Resolved by removing VIIRS enrichment entirely in v0.7.0 (0.01% signal: 65/512K events).
 
 ### 🟡 Warning → ✅ Fixed
 
-5. **Weather enrichment 22% coverage** — Fixed: All 8 weather zones now mapped. Near-100% enrichment.
+5. **Weather enrichment 22% coverage** — Resolved by removing weather enrichment entirely in v0.7.0 (only 2024 data, 20% temporal coverage).
 
 6. **Column name collisions (_x/_y)** — Fixed: Duplicate columns dropped before merge in enrich.py.
 
@@ -166,11 +155,9 @@ The following critical issues were identified in the initial audit and have been
 | # | Issue | Impact | Mitigation |
 |---|-------|--------|------------|
 | 1 | Registry fill rate 50.3% | Missing vessel specs for ~half of vessels | Use available fields; SAR as alternative signal |
-| 2 | Weather data only 2024 | No historical weather | Use Open-Meteo API for backfill |
-| 3 | VIIRS is sample data (5K rows) | Limited enrichment | Focus on SAR + AIS as primary signals |
-| 4 | `potential_risk` only 0.4% True | Severe class imbalance | Anomaly detection or weighted loss |
-| 5 | Weather lat/lon are int64 | Imprecise zone centers | Acceptable for zone-level matching |
-| 6 | No EEZ/MPA shapefile join | Uses GFW regions field instead | GFW regions data is reliable |
+| 2 | `potential_risk` only 0.4% True | Severe class imbalance | Anomaly detection or weighted loss |
+| 3 | No EEZ/MPA shapefile join | Uses GFW regions field instead | GFW regions data is reliable |
+| 4 | 30 ports only | Limited nearest-port coverage | Major ports covered; add from OSM |
 
 ---
 
@@ -193,8 +180,6 @@ Phase 1 (Extract):
                       ──→ fishing_effort_flat.parquet (13 cols)
                       ──→ vessel_registry.parquet (12 cols, MMSI string)
                       ──→ zenodo_effort_flat.parquet (10 cols, spatially filtered)
-                      ──→ weather.parquet (9 cols)
-                      ──→ viirs_detections.parquet (8 cols)
                       ──→ ports.parquet (3 cols)
 
 Phase 2 (Clean):
@@ -204,7 +189,7 @@ Phase 2 (Clean):
 
 Phase 3 (Features + Enrichment):
   pipeline/features.py ──→ Vessel profiles + behavioral features (32 cols)
-  pipeline/enrich.py   ──→ gfw_events_full.parquet (121 cols) ← FINAL
+  pipeline/enrich.py   ──→ gfw_events_full.parquet (111 cols) ← FINAL
 ```
 
 ---

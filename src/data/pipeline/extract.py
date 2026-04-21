@@ -10,7 +10,7 @@ Functions:
 - extract_fishing_effort: Load effort JSON → fishing_effort_flat.parquet
 - extract_vessel_registry: Load Zenodo CSV → vessel_registry.parquet
 - extract_zenodo_effort: Load Zenodo zips → zenodo_effort_flat.parquet
-- extract_auxiliary: Load weather, VIIRS, ports → individual parquets
+- extract_ports: Load port reference data → ports.parquet
 - run_extract_all: Run all extract functions, return mapping
 """
 
@@ -27,14 +27,14 @@ from typing import Optional
 import pandas as pd
 
 from ..constants import (
-    GFW_RAW_DIR, PROCESSED_DIR, ZENODO_RAW_DIR, BMKG_RAW_DIR, VIIRS_RAW_DIR,
+    GFW_RAW_DIR, PROCESSED_DIR, ZENODO_RAW_DIR,
     RAW_DIR,
     GFW_FISHING_FILE, GFW_ENCOUNTERS_FILE, GFW_LOITERING_FILE, GFW_PORT_VISITS_FILE,
     GFW_SAR_FILE, GFW_EFFORT_FILE,
-    ZENODO_VESSELS_FILE, PORTS_FILE, WEATHER_FILE, VIIRS_FILE,
+    ZENODO_VESSELS_FILE, PORTS_FILE,
     GFW_EVENTS_FLAT, SAR_PRESENCE_FLAT, FISHING_EFFORT_FLAT,
     VESSEL_REGISTRY, ZENODO_EFFORT_FLAT,
-    WEATHER_PARQUET, VIIRS_PARQUET, PORTS_PARQUET,
+    PORTS_PARQUET,
     EVENT_FLAGS, INDONESIA_BBOX,
 )
 
@@ -577,33 +577,12 @@ def extract_zenodo_effort() -> Path:
     return output_path
 
 
-def extract_auxiliary() -> list[Path]:
-    """Load weather, VIIRS, and port data → individual parquets.
+def extract_ports() -> Path:
+    """Load port reference data → ports.parquet.
 
     Returns:
-        List of output parquet paths.
+        Path to ports.parquet.
     """
-    paths = []
-
-    # Weather
-    logger.info("Loading weather data...")
-    df_weather = pd.read_csv(BMKG_RAW_DIR / WEATHER_FILE)
-    logger.info(f"  Weather: {len(df_weather):,} rows")
-    weather_path = PROCESSED_DIR / WEATHER_PARQUET
-    df_weather.to_parquet(weather_path, index=False)
-    logger.info(f"  ✅ Saved to {weather_path}")
-    paths.append(weather_path)
-
-    # VIIRS
-    logger.info("Loading VIIRS data...")
-    df_viirs = pd.read_csv(VIIRS_RAW_DIR / VIIRS_FILE)
-    logger.info(f"  VIIRS: {len(df_viirs):,} rows")
-    viirs_path = PROCESSED_DIR / VIIRS_PARQUET
-    df_viirs.to_parquet(viirs_path, index=False)
-    logger.info(f"  ✅ Saved to {viirs_path}")
-    paths.append(viirs_path)
-
-    # Ports
     logger.info("Loading port data...")
     with open(GFW_RAW_DIR / PORTS_FILE) as f:
         ports = json.load(f)
@@ -612,9 +591,7 @@ def extract_auxiliary() -> list[Path]:
     ports_path = PROCESSED_DIR / PORTS_PARQUET
     df_ports.to_parquet(ports_path, index=False)
     logger.info(f"  ✅ Saved to {ports_path}")
-    paths.append(ports_path)
-
-    return paths
+    return ports_path
 
 
 def run_extract_all() -> dict[str, Path]:
@@ -631,9 +608,7 @@ def run_extract_all() -> dict[str, Path]:
     results["fishing_effort"] = extract_fishing_effort()
     results["vessel_registry"] = extract_vessel_registry()
     results["zenodo_effort"] = extract_zenodo_effort()
-
-    for p in extract_auxiliary():
-        results[p.stem] = p
+    results["ports"] = extract_ports()
 
     logger.info("✅ Extract phase complete")
     return results

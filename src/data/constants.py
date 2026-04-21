@@ -12,8 +12,6 @@ RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 GFW_RAW_DIR = RAW_DIR / "gfw"
 ZENODO_RAW_DIR = RAW_DIR / "zenodo"
-BMKG_RAW_DIR = RAW_DIR / "bmkg"
-VIIRS_RAW_DIR = RAW_DIR / "viirs"
 
 # ===== INDONESIA BOUNDING BOX =====
 INDONESIA_BBOX = {
@@ -55,8 +53,6 @@ GFW_SAR_FILE = "4wings_sar_presence_indonesia_corrected.json.gz"
 GFW_EFFORT_FILE = "4wings_fishing_effort_indonesia_corrected.json.gz"
 ZENODO_VESSELS_FILE = "fishing-vessels-v3.csv"
 PORTS_FILE = "osm_indonesia_ports_manual.json"
-WEATHER_FILE = "marine_weather_2024.csv"
-VIIRS_FILE = "sample_vbd_detections_2024.csv"
 
 # ===== OUTPUT FILENAMES =====
 GFW_EVENTS_FLAT = "gfw_events_flat.parquet"
@@ -64,8 +60,6 @@ SAR_PRESENCE_FLAT = "sar_presence_flat.parquet"
 FISHING_EFFORT_FLAT = "fishing_effort_flat.parquet"
 VESSEL_REGISTRY = "vessel_registry.parquet"
 ZENODO_EFFORT_FLAT = "zenodo_effort_flat.parquet"
-WEATHER_PARQUET = "weather.parquet"
-VIIRS_PARQUET = "viirs_detections.parquet"
 PORTS_PARQUET = "ports.parquet"
 
 GFW_EVENTS_DEDUP = "gfw_events_dedup.parquet"

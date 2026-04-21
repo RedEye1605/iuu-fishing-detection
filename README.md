@@ -13,7 +13,7 @@ Deep learning system to detect IUU fishing in Indonesian waters by analyzing ves
 ### Key Innovation
 - **Graph-based modeling** — Vessels as nodes, spatial proximity as edges
 - **Temporal attention** — Capture behavioral patterns over time
-- **Multi-source fusion** — AIS + SAR + VIIRS + weather + zone boundaries
+- **Multi-source fusion** — AIS + SAR + zone boundaries
 - **Explainability** — Identify *why* a vessel is flagged as IUU
 
 ---
@@ -119,7 +119,7 @@ The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runti
 
 ### `data/processed/gfw_events_full.parquet`
 - **Rows:** 512,247 events
-- **Columns:** 121
+- **Columns:** 111
 - **Size:** 80.7 MB
 - **Coverage:** Indonesian waters, 2020–2025
 - **Event types:** Fishing (56%), Loitering (25%), Port Visit (10%), Encounter (9%)
@@ -129,7 +129,7 @@ The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runti
 
 | File | Rows | Cols | Description |
 |------|------|------|-------------|
-| `gfw_events_full.parquet` | 512,247 | 121 | **Final enriched events** |
+| `gfw_events_full.parquet` | 512,247 | 111 | **Final enriched events** |
 | `gfw_events_clean.parquet` | 512,247 | 66 | Cleaned events (pre-enrichment) |
 | `gfw_events_flat.parquet` | 512,272 | 54 | Raw flattened events |
 | `vessel_behavioral_features.parquet` | 14,857 | 32 | Per-vessel behavioral profiles |
@@ -137,11 +137,9 @@ The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runti
 | `fishing_effort_clean.parquet` | 885,649 | 18 | Cleaned GFW fishing effort |
 | `sar_presence_clean.parquet` | 742,075 | 18 | Cleaned SAR presence |
 | `zenodo_effort_clean.parquet` | 707,118 | 12 | Cleaned Zenodo effort (spatially filtered) |
-| `weather.parquet` | 2,920 | 9 | BMKG marine weather |
-| `viirs_detections.parquet` | 5,000 | 8 | VIIRS boat detections (sample) |
 | `ports.parquet` | 30 | 3 | Indonesia port locations |
 
-### Feature Categories (121 columns)
+### Feature Categories (111 columns)
 
 | Category | Columns | Description |
 |----------|---------|-------------|
@@ -153,8 +151,6 @@ The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runti
 | Temporal | 8 | Hour, day, month, season, etc. |
 | Registry | 9 | Vessel class, length, engine, tonnage |
 | Spatial | 5 | Grid cell, sea zone, nearest port |
-| Weather | 7 | Wind, wave, temp, visibility |
-| VIIRS | 3 | Detection count, radiance, nearby flag |
 | SAR/Effort | 4 | Detection density, effort density |
 | Behavioral | 22 | Per-vessel fishing/encounter/loitering patterns |
 
@@ -165,8 +161,7 @@ The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runti
 | Limitation | Impact | Notes |
 |-----------|--------|-------|
 | Registry fill rate 50.3% | Missing vessel specs for ~half of vessels | 1,598/14,857 MMSIs matched in Zenodo registry |
-| VIIRS is sample data (5K rows) | Limited VIIRS enrichment | Focus on SAR + AIS as primary signals |
-| Weather data only 2024 | No historical weather enrichment | Consider Open-Meteo API for backfill |
+| Raw weather/VIIRS data excluded | BMKG (2024 only, 20% coverage) and VIIRS (5K sample, 0.01% signal) not used in pipeline | Focus on SAR + AIS as primary signals |
 | No EEZ/MPA shapefile spatial join | Uses GFW regions field instead | GFW regions data is reliable for Indonesia |
 | `potential_risk` only 0.4% True | Severe class imbalance | May need anomaly detection approach |
 | 30 ports only | Limited port coverage | Major ports covered; add from OSM for more |

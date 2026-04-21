@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.7.0 - Weather & VIIRS Removal (2026-04-22)
+
+### Breaking Changes
+- **Weather enrichment REMOVED** — BMKG marine weather data only covered 2024 (20% temporal coverage), not useful for the model across 2020–2025
+- **VIIRS enrichment REMOVED** — Only 5K sample rows with 0.01% signal (65/512K events matched)
+- Final dataset reduced from 121 → 111 columns
+- `extract_auxiliary()` renamed to `extract_ports()` — only loads port data now
+- Constants `WEATHER_FILE`, `VIIRS_FILE`, `WEATHER_PARQUET`, `VIIRS_PARQUET`, `BMKG_RAW_DIR`, `VIIRS_RAW_DIR` removed from `constants.py`
+- `weather.parquet` and `viirs_detections.parquet` are no longer pipeline outputs
+- Raw data files (`marine_weather_2024.csv`, `sample_vbd_detections_2024.csv`) still exist in `data/raw/` but are no longer pipeline inputs
+
+### Impact
+- 7 weather columns removed: weather_lon, weather_lat, weather_wind_speed_knots, weather_wave_height_m, weather_sea_surface_temp_c, weather_visibility_km, weather_precipitation_mm
+- 3 VIIRS columns removed: viirs_count, viirs_avg_radiance, viirs_detection_nearby
+- SAR density + Fishing effort density enrichment unchanged
+- Behavioral features unchanged
+
 ## v0.6.0 - Full Pipeline Re-run & Validation (2026-04-22)
 
 ### Re-run Results
@@ -13,12 +30,11 @@ All 9 pipeline steps re-executed from raw data with all fixes applied.
 - ✅ No `__index_level_0__` leak in any file
 - ✅ No duplicate event_ids
 - ✅ All coordinates within Indonesia bbox
-- ✅ 121 clean columns in gfw_events_full.parquet
+- ✅ 111 clean columns in gfw_events_full.parquet
 
 ### Final Dataset
-- gfw_events_full.parquet: 512,247 rows × 121 cols × 80.7 MB
+- gfw_events_full.parquet: 512,247 rows × 111 cols
 - 14,857 vessels profiled with behavioral features
-- Weather: 100% enriched (8 zones)
 - SAR density + Fishing effort density merged
 - Column naming: clean, no suffixes, no duplicates
 
@@ -76,7 +92,7 @@ All 9 pipeline steps re-executed from raw data with all fixes applied.
 - Behavioral features merged per vessel
 
 ### Final Dataset
-- gfw_events_full.parquet: 512,247 rows × 121 cols, 80.7 MB
+- gfw_events_full.parquet: 512,247 rows × 111 cols
 - vessel_behavioral_features.parquet: 14,857 vessels × 32 cols
 
 ## v0.3.0 - Phase 2: Clean & Validate (2026-04-21)

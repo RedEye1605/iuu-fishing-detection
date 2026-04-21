@@ -10,9 +10,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Total files | 14 parquet files |
+| Total files | 12 parquet files |
 | Total rows | ~4.5M across all files |
-| Final dataset | 512,247 rows × 121 cols |
+| Final dataset | 512,247 rows × 111 cols |
 | MMSI type consistency | ✅ `large_string` everywhere |
 | Coordinate validity | ✅ 100% within Indonesia bbox |
 | Duplicate event_ids | ✅ 0 |
@@ -25,7 +25,7 @@
 ## 2. Per-File Quality Metrics
 
 ### `gfw_events_full.parquet` — FINAL OUTPUT
-- **Rows:** 512,247 | **Cols:** 121 | **Size:** 80.7 MB
+- **Rows:** 512,247 | **Cols:** 111
 - **Duplicates:** 0 event_id duplicates ✅
 - **Coordinates:** 100% within Indonesia bbox (lat -11.5 to 6.5, lon 95 to 141.5) ✅
 - **MMSI:** All `large_string`, 0 nulls in mmsi column ✅
@@ -68,15 +68,11 @@
 - 0 nulls ✅
 - No index leak ✅
 
-### `weather.parquet`
-- **Rows:** 2,920 | **Cols:** 9
-- 8 zones × 365 days (2024 only)
-- lat/lon: int64 (zone centers — acceptable)
+### ~~`weather.parquet`~~ — REMOVED in v0.7.0
+Weather enrichment removed due to insufficient temporal coverage (2024 only, 20% of events).
 
-### `viirs_detections.parquet`
-- **Rows:** 5,000 | **Cols:** 8
-- Sample/synthetic data only
-- date_gmt: int64 (parsed downstream)
+### ~~`viirs_detections.parquet`~~ — REMOVED in v0.7.0
+VIIRS enrichment removed due to insufficient signal (5K sample rows, 0.01% match rate: 65/512K events).
 
 ### `ports.parquet`
 - **Rows:** 30 | **Cols:** 3
@@ -86,8 +82,8 @@
 
 ## 3. Null Analysis (gfw_events_full.parquet)
 
-### Columns with 0% null (82 columns)
-All core columns: event_id, event_type, start_time, end_time, lat, lon, mmsi, duration_hours, vessel_name, vessel_flag, vessel_type, in_highseas, potential_risk, avg_speed_knots, is_domestic, is_foreign, hour_of_day, day_of_week, month, year, is_nighttime, is_weekend, season, grid_lat, grid_lon, sea_zone, in_indonesia_bbox, implied_speed_knots, speed_outlier, total_events, tracking_span_days, fishing_count, encounter_count, loitering_count, port_visit_count, spatial_range_km, unique_grid_cells, encounters_total, loitering_events, port_visits, encounter_rate, loitering_rate, fishing_ratio, viirs_count, sar_total_detections, effort_hours_in_cell, sar_unique_vessels, effort_vessels_in_cell, plus all bbox, distance, and boolean columns.
+### Columns with 0% null (75 columns)
+All core columns: event_id, event_type, start_time, end_time, lat, lon, mmsi, duration_hours, vessel_name, vessel_flag, vessel_type, in_highseas, potential_risk, avg_speed_knots, is_domestic, is_foreign, hour_of_day, day_of_week, month, year, is_nighttime, is_weekend, season, grid_lat, grid_lon, sea_zone, in_indonesia_bbox, implied_speed_knots, speed_outlier, total_events, tracking_span_days, fishing_count, encounter_count, loitering_count, port_visit_count, spatial_range_km, unique_grid_cells, encounters_total, loitering_events, port_visits, encounter_rate, loitering_rate, fishing_ratio, sar_total_detections, effort_hours_in_cell, sar_unique_vessels, effort_vessels_in_cell, plus all bbox, distance, and boolean columns.
 
 ### Columns with >50% null (28 columns)
 These are **event-type specific** — null for event types that don't use them:
@@ -121,7 +117,7 @@ These are **event-type specific** — null for event types that don't use them:
 | tonnage_per_length | ~50% | Registry fill rate |
 | avg_fishing_duration | ~21% | Many vessels have no fishing events |
 | vessel_flag (behavioral) | ~11% | Behavioral merge artifact |
-| viirs_detection_nearby | varies | Depends on VIIRS coverage |
+| viirs_detection_nearby | varies | ~~Removed in v0.7.0~~ |
 
 ---
 
@@ -129,7 +125,7 @@ These are **event-type specific** — null for event types that don't use them:
 
 | Check | Result | Status |
 |-------|--------|--------|
-| MMSI type | `large_string` in all 14 files | ✅ |
+| MMSI type | `large_string` in all 12 files | ✅ |
 | Registry → Events MMSI overlap | 1,598/14,857 (10.8% of event MMSIs) | ⚠️ |
 | Behavioral → Events MMSI overlap | 14,857/14,857 (100%) | ✅ |
 | Event row count (clean vs full) | Both 512,247 | ✅ |
@@ -213,7 +209,6 @@ The **50.3% fill rate** reported in the pipeline refers to the percentage of eve
 - Vessel: is_domestic, vessel_type_encoded, reg_length_m_norm, is_fishing_vessel
 - Behavioral: fishing_ratio, encounter_rate, loitering_rate, spatial_range_km_norm, unique_grid_cells_norm, avg_speed_knots_norm
 - Context: sea_zone_encoded, nearest_port_dist_km_norm, in_highseas
-- Weather: weather_wind_speed_knots_norm, weather_wave_height_m_norm
 
 ---
 
@@ -222,8 +217,7 @@ The **50.3% fill rate** reported in the pipeline refers to the percentage of eve
 | Issue | Impact | Mitigation |
 |-------|--------|------------|
 | Registry 50% fill | Missing vessel specs | Add `has_registry` flag; impute by vessel_type median |
-| VIIRS sample (5K) | Low match rate | Use SAR as primary satellite signal |
-| Weather 2024 only | No historical weather | Accept as-is or backfill from Open-Meteo |
+| Raw weather/VIIRS excluded | BMKG (2024 only) and VIIRS (5K sample) removed in v0.7.0 | Focus on SAR + AIS as primary signals |
 | potential_risk 0.4% | Class imbalance | Weighted loss, SMOTE, or anomaly detection |
 | 30 ports | Limited coverage | Major ports covered; sufficient for nearest-port feature |
 | No EEZ shapefile join | Less precise EEZ assignment | GFW regions data is reliable |
