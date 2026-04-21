@@ -47,3 +47,33 @@
 ### Cleanup
 - Removed 9 intermediate (_flat, _dedup) parquet files
 - Final 8 clean parquet files in data/processed/
+
+## v0.4.0 - Phase 3: Feature Engineering (2026-04-21)
+
+### Step 3.1: Vessel Profile Features
+- Joined events with vessel registry (1,598 MMSIs matched, 50.3% fill rate)
+- Added: vessel_class, length_m, engine_power_kw, tonnage_gt, size_category
+- Added: is_fishing_vessel, tonnage_per_length (density proxy)
+- Nearest port computed from 30 Indonesian ports
+- Sea zone classification (Java Sea, Malacca Strait, etc.)
+
+### Step 3.3: Temporal Features (already in Phase 2)
+- Duration category: short (<2h), medium (2-8h), long (>8h)
+- Grid cell (0.1° ≈ 11km) for spatial aggregation
+
+### Step 3.4: Behavioral Features
+- 14,857 unique vessels profiled with 32 features
+- Per-vessel: fishing patterns, spatial range, encounter/loitering rates
+- Speed stats, port visit patterns
+- Key finding: 85% loitering rate (many vessels only appear in loitering events)
+
+### Step 3.5: Cross-Source Enrichment
+- Weather: 100% enriched (zone-based monthly averages)
+- VIIRS: 0% match (VIIRS sample dates don't overlap with event dates)
+- SAR density: merged grid-cell/monthly detection counts
+- Fishing effort density: merged grid-cell/monthly fishing hours
+- Behavioral features merged per vessel
+
+### Final Dataset
+- gfw_events_full.parquet: 512,247 rows × 105 cols, 81.2 MB
+- vessel_behavioral_features.parquet: 14,857 vessels × 32 cols, 1.2 MB
