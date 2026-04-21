@@ -1,0 +1,170 @@
+[
+  {
+    "name": "Taman Nasional Komodo",
+    "type": "National Park",
+    "lon": 119.5,
+    "lat": -8.55,
+    "area_km2": 1733,
+    "bbox": [
+      119.3125,
+      -8.7375,
+      119.6875,
+      -8.3625
+    ],
+    "is_no_take": false
+  },
+  {
+    "name": "Taman Nasional Bunaken",
+    "type": "National Park",
+    "lon": 124.75,
+    "lat": 1.62,
+    "area_km2": 890,
+    "bbox": [
+      124.6156,
+      1.4856,
+      124.8844,
+      1.7544
+    ],
+    "is_no_take": true
+  },
+  {
+    "name": "Taman Nasional Wakatobi",
+    "type": "National Park",
+    "lon": 123.6,
+    "lat": -5.3,
+    "area_km2": 1390,
+    "bbox": [
+      123.4321,
+      -5.4679,
+      123.7679,
+      -5.1321
+    ],
+    "is_no_take": true
+  },
+  {
+    "name": "Taman Nasional Karimunjawa",
+    "type": "National Park",
+    "lon": 110.4,
+    "lat": -5.85,
+    "area_km2": 1116,
+    "bbox": [
+      110.2495,
+      -6.0005,
+      110.5505,
+      -5.6995
+    ],
+    "is_no_take": true
+  },
+  {
+    "name": "Taman Nasional Teluk Cenderawasih",
+    "type": "National Park",
+    "lon": 134.9,
+    "lat": -2.7,
+    "area_km2": 14535,
+    "bbox": [
+      134.3569,
+      -3.2431,
+      135.4431,
+      -2.1569
+    ],
+    "is_no_take": false
+  },
+  {
+    "name": "Taman Nasional Kepulauan Seribu",
+    "type": "National Park",
+    "lon": 106.5,
+    "lat": -5.6,
+    "area_km2": 1079,
+    "bbox": [
+      106.352,
+      -5.748,
+      106.648,
+      -5.452
+    ],
+    "is_no_take": false
+  },
+  {
+    "name": "Taman Nasional Ujung Kulon",
+    "type": "National Park",
+    "lon": 105.33,
+    "lat": -6.75,
+    "area_km2": 1206,
+    "bbox": [
+      105.1736,
+      -6.9064,
+      105.4864,
+      -6.5936
+    ],
+    "is_no_take": false
+  },
+  {
+    "name": "Cenderawasih Bay MPA",
+    "type": "Marine Sanctuary",
+    "lon": 135.5,
+    "lat": -3.0,
+    "area_km2": 5000,
+    "bbox": [
+      135.1815,
+      -3.3185,
+      135.8185,
+      -2.6815
+    ],
+    "is_no_take": true
+  },
+  {
+    "name": "Raja Ampat MPA Network",
+    "type": "Marine Sanctuary",
+    "lon": 130.5,
+    "lat": -0.5,
+    "area_km2": 46000,
+    "bbox": [
+      129.5339,
+      -1.4661,
+      131.4661,
+      0.4661
+    ],
+    "is_no_take": false
+  },
+  {
+    "name": "Savu Sea MPA",
+    "type": "Marine Sanctuary",
+    "lon": 122.0,
+    "lat": -9.0,
+    "area_km2": 33597,
+    "bbox": [
+      121.1743,
+      -9.8257,
+      122.8257,
+      -8.1743
+    ],
+    "is_no_take": true
+  },
+  {
+    "name": "Banda Sea MPA",
+    "type": "Marine Sanctuary",
+    "lon": 129.0,
+    "lat": -5.0,
+    "area_km2": 50000,
+    "bbox": [
+      127.9928,
+      -6.0072,
+      130.0072,
+      -3.9928
+    ],
+    "is_no_take": true
+  },
+  {
+    "name": "Bird's Head Seascape",
+    "type": "Marine Sanctuary",
+    "lon": 131.0,
+    "lat": -1.5,
+    "area_km2": 36000,
+    "bbox": [
+      130.1453,
+      -2.3547,
+      131.8547,
+      -0.6453
+    ],
+    "is_no_take": false
+  }
+]

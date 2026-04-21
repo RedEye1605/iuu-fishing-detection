@@ -1,0 +1,21 @@
+
+    MPA / WDPA DATA DOWNLOAD INSTRUCTIONS
+    =======================================
+    
+    Option 1: Protected Planet (WDPA)
+    1. Visit https://www.protectedplanet.net/country/IDN
+    2. Click "Download" to get WDPA data for Indonesia
+    3. Requires free registration
+    4. Select "Marine" protected areas only
+    5. Place shapefile in data/raw/gis/
+    
+    Option 2: MPAtlas
+    1. Visit https://old.mpatlas.org/data/download/
+    2. Download global MPA shapefile
+    3. Filter for Indonesia (ISO = IDN)
+    
+    Option 3: KKP Indonesia (government)
+    1. Visit https://kkp.go.id/
+    2. Look for "Kawasan Konservasi Perairan" (KKP) data
+    3. May require Bahasa Indonesia navigation
+    

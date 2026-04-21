@@ -1,0 +1,21 @@
+{
+  "fisheries_production_by_type": {
+    "url": "https://www.bps.go.id/en/statistics-table/2/MTUwNiMy/fisheries-production-by-type-of-fisheries-capture.html",
+    "var_id": 1506,
+    "description": "Fisheries production by type of capture (tons), by province, 2024"
+  },
+  "fisheries_production_by_species": {
+    "url": "https://www.bps.go.id/en/statistics-table/2/MTU1NiMy/fisheries-production-by-kind-of-fish.html",
+    "var_id": 1556,
+    "description": "Fisheries production by fish species, by province"
+  },
+  "fishing_boats": {
+    "url": "https://www.bps.go.id/en/statistics-table/2/MTY1NiMy/number-of-fishing-boats.html",
+    "var_id": 1656,
+    "description": "Number of fishing boats by type, by province"
+  },
+  "fishing_port_stats": {
+    "url": "https://www.bps.go.id/en/publication/2025/11/07/d6ea7b9329941356bd48b297/statistics-of-fishing-port-2024.html",
+    "description": "Statistics of Fishing Port 2024 (publication)"
+  }
+}

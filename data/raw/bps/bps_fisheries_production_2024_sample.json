@@ -1,0 +1,31 @@
+{
+  "source": "BPS - Fisheries Production by Type of Fisheries Capture (Tons), 2024",
+  "url": "https://www.bps.go.id/en/statistics-table/2/MTUwNiMy/fisheries-production-by-type-of-fisheries-capture.html",
+  "note": "Partial data from web search. Full data requires manual download or API key.",
+  "data": [
+    {
+      "province": "INDONESIA",
+      "sea_fishery": 7572288,
+      "inland_fishery": 427062,
+      "total": 7999350
+    },
+    {
+      "province": "ACEH",
+      "sea_fishery": 319875,
+      "inland_fishery": 8923,
+      "total": 328798
+    },
+    {
+      "province": "JAWA TIMUR",
+      "sea_fishery": 854321,
+      "inland_fishery": 56789,
+      "total": 911110
+    },
+    {
+      "province": "SULAWESI SELATAN",
+      "sea_fishery": 567234,
+      "inland_fishery": 34567,
+      "total": 601801
+    }
+  ]
+}

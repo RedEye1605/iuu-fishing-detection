@@ -1,0 +1,437 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Taman Nasional Komodo",
+        "type": "National Park",
+        "area_km2": 1733,
+        "is_no_take": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              119.3125,
+              -8.7375
+            ],
+            [
+              119.6875,
+              -8.7375
+            ],
+            [
+              119.6875,
+              -8.3625
+            ],
+            [
+              119.3125,
+              -8.3625
+            ],
+            [
+              119.3125,
+              -8.7375
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Taman Nasional Bunaken",
+        "type": "National Park",
+        "area_km2": 890,
+        "is_no_take": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              124.6156,
+              1.4856
+            ],
+            [
+              124.8844,
+              1.4856
+            ],
+            [
+              124.8844,
+              1.7544
+            ],
+            [
+              124.6156,
+              1.7544
+            ],
+            [
+              124.6156,
+              1.4856
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Taman Nasional Wakatobi",
+        "type": "National Park",
+        "area_km2": 1390,
+        "is_no_take": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              123.4321,
+              -5.4679
+            ],
+            [
+              123.7679,
+              -5.4679
+            ],
+            [
+              123.7679,
+              -5.1321
+            ],
+            [
+              123.4321,
+              -5.1321
+            ],
+            [
+              123.4321,
+              -5.4679
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Taman Nasional Karimunjawa",
+        "type": "National Park",
+        "area_km2": 1116,
+        "is_no_take": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              110.2495,
+              -6.0005
+            ],
+            [
+              110.5505,
+              -6.0005
+            ],
+            [
+              110.5505,
+              -5.6995
+            ],
+            [
+              110.2495,
+              -5.6995
+            ],
+            [
+              110.2495,
+              -6.0005
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Taman Nasional Teluk Cenderawasih",
+        "type": "National Park",
+        "area_km2": 14535,
+        "is_no_take": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              134.3569,
+              -3.2431
+            ],
+            [
+              135.4431,
+              -3.2431
+            ],
+            [
+              135.4431,
+              -2.1569
+            ],
+            [
+              134.3569,
+              -2.1569
+            ],
+            [
+              134.3569,
+              -3.2431
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Taman Nasional Kepulauan Seribu",
+        "type": "National Park",
+        "area_km2": 1079,
+        "is_no_take": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              106.352,
+              -5.748
+            ],
+            [
+              106.648,
+              -5.748
+            ],
+            [
+              106.648,
+              -5.452
+            ],
+            [
+              106.352,
+              -5.452
+            ],
+            [
+              106.352,
+              -5.748
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Taman Nasional Ujung Kulon",
+        "type": "National Park",
+        "area_km2": 1206,
+        "is_no_take": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              105.1736,
+              -6.9064
+            ],
+            [
+              105.4864,
+              -6.9064
+            ],
+            [
+              105.4864,
+              -6.5936
+            ],
+            [
+              105.1736,
+              -6.5936
+            ],
+            [
+              105.1736,
+              -6.9064
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Cenderawasih Bay MPA",
+        "type": "Marine Sanctuary",
+        "area_km2": 5000,
+        "is_no_take": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              135.1815,
+              -3.3185
+            ],
+            [
+              135.8185,
+              -3.3185
+            ],
+            [
+              135.8185,
+              -2.6815
+            ],
+            [
+              135.1815,
+              -2.6815
+            ],
+            [
+              135.1815,
+              -3.3185
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Raja Ampat MPA Network",
+        "type": "Marine Sanctuary",
+        "area_km2": 46000,
+        "is_no_take": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              129.5339,
+              -1.4661
+            ],
+            [
+              131.4661,
+              -1.4661
+            ],
+            [
+              131.4661,
+              0.4661
+            ],
+            [
+              129.5339,
+              0.4661
+            ],
+            [
+              129.5339,
+              -1.4661
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Savu Sea MPA",
+        "type": "Marine Sanctuary",
+        "area_km2": 33597,
+        "is_no_take": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.1743,
+              -9.8257
+            ],
+            [
+              122.8257,
+              -9.8257
+            ],
+            [
+              122.8257,
+              -8.1743
+            ],
+            [
+              121.1743,
+              -8.1743
+            ],
+            [
+              121.1743,
+              -9.8257
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Banda Sea MPA",
+        "type": "Marine Sanctuary",
+        "area_km2": 50000,
+        "is_no_take": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              127.9928,
+              -6.0072
+            ],
+            [
+              130.0072,
+              -6.0072
+            ],
+            [
+              130.0072,
+              -3.9928
+            ],
+            [
+              127.9928,
+              -3.9928
+            ],
+            [
+              127.9928,
+              -6.0072
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bird's Head Seascape",
+        "type": "Marine Sanctuary",
+        "area_km2": 36000,
+        "is_no_take": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              130.1453,
+              -2.3547
+            ],
+            [
+              131.8547,
+              -2.3547
+            ],
+            [
+              131.8547,
+              -0.6453
+            ],
+            [
+              130.1453,
+              -0.6453
+            ],
+            [
+              130.1453,
+              -2.3547
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

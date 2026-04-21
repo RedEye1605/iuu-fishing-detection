@@ -1,0 +1,9 @@
+
+    VIIRS VBD DATA DOWNLOAD INSTRUCTIONS
+    ======================================
+    1. Register at https://eogdata.mines.edu/ (free account)
+    2. After login, navigate to: https://eogdata.mines.edu/wwwdata/viirs_products/vbd-pub/v23/
+    3. For Indonesia data, go to: /idn/final/ (nightly CSV) or /idn/monthly/ (GeoTIFF)
+    4. Download files matching: VBD_npp_d2024*_idn_noaa_ops_v23.csv
+    5. Place downloaded files in this directory (data/raw/viirs/)
+    

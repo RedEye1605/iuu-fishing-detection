@@ -12,10 +12,11 @@ venv/
 env/
 
 # Data files (too large for GitHub)
-data/raw/
+data/raw/gfw/
+data/raw/zenodo/
+*.json.gz
 *.csv
 *.zip
-*.gz
 *.tar.gz
 *.parquet
 *.feather
@@ -43,7 +44,7 @@ models/trained/
 
 # Env
 .env
+.gfw_token
 
 # Logs
 *.log
-.gfw_token
