@@ -53,7 +53,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 1.1: GFW Events → Unified Events Table ✅
 
-**Script:** `src/data/loaders.py`
+**Script:** `src/data/pipeline/extract.py`
 **Input:** 4 GFW event JSON.gz files
 **Output:** `data/processed/gfw_events_flat.parquet` (512,272 rows × 54 cols)
 
@@ -73,7 +73,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 1.2: GFW SAR & Effort → Grid Tables ✅
 
-**Script:** `src/data/loaders_sar_effort.py`
+**Script:** `src/data/pipeline/extract.py`
 **Input:** SAR presence JSON, fishing effort JSON
 **Output:**
 - `sar_presence_flat.parquet` (1,242,915 rows × 13 cols) — includes ~40% grid-only rows (no MMSI)
@@ -86,7 +86,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 1.3: Zenodo Vessel Registry ✅
 
-**Script:** `src/data/loaders_aux.py`
+**Script:** `src/data/pipeline/extract.py`
 **Input:** `zenodo/fishing-vessels-v3.csv`
 **Output:** `vessel_registry.parquet` (147,924 rows × 12 cols)
 
@@ -97,7 +97,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 1.4: Zenodo Monthly Effort ✅
 
-**Script:** `src/data/loaders_aux.py`
+**Script:** `src/data/pipeline/extract.py`
 **Input:** 5 zip files (2020–2024)
 **Output:** `zenodo_effort_flat.parquet` (707,118 rows × 10 cols)
 
@@ -110,7 +110,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 1.5: Weather, VIIRS, Ports ✅
 
-**Script:** `src/data/loaders_aux.py`
+**Script:** `src/data/pipeline/extract.py`
 **Output:**
 - `weather.parquet` (2,920 rows × 9 cols) — lat/lon are int64 (zone centers)
 - `viirs_detections.parquet` (5,000 rows × 8 cols) — `date_gmt` is int64 (parsed later)
@@ -124,7 +124,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 2.1: Deduplication ✅
 
-**Script:** `src/data/step_2_1_dedup.py`
+**Script:** `src/data/pipeline/clean.py`
 
 | Dataset | Input | Output | Duplicates |
 |---------|-------|--------|------------|
@@ -138,7 +138,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Steps 2.2–2.6: Clean & Validate GFW Events ✅
 
-**Script:** `src/data/step_2_2_clean.py`
+**Script:** `src/data/pipeline/clean.py`
 **Output:** `gfw_events_clean.parquet` (512,247 rows × 66 cols)
 
 **Actions performed:**
@@ -151,7 +151,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 2.7: Clean SAR/Effort/Zenodo ✅
 
-**Script:** `src/data/step_2_7_clean_rest.py`
+**Script:** `src/data/pipeline/clean.py`
 **Output:**
 - `sar_presence_clean.parquet` (742,075 rows × 18 cols)
 - `fishing_effort_clean.parquet` (885,649 rows × 18 cols)
@@ -165,7 +165,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 3.1: Vessel Profile + Spatial Features ✅
 
-**Script:** `src/data/step_3_1_vessel_features.py`
+**Script:** `src/data/pipeline/features.py`
 
 **Actions performed:**
 - Registry join on `mmsi` (string): 1,598/14,857 MMSIs matched (50.3% fill rate)
@@ -179,7 +179,7 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 
 ### Step 3.4: Per-Vessel Behavioral Features ✅
 
-**Script:** `src/data/step_3_4_behavioral.py`
+**Script:** `src/data/pipeline/features.py`
 **Output:** `vessel_behavioral_features.parquet` (14,857 rows × 32 cols)
 
 **Actions performed:**
@@ -189,11 +189,11 @@ Phase 1: Load & Flatten          Phase 2: Clean & Validate         Phase 3: Feat
 - Speed statistics, encounter/loitering rates, port visit patterns
 - Key: `mmsi` (string), 1:1 with unique vessels
 
-**Note:** Step numbering jumps from 3.1 to 3.4 because temporal features (3.2/3.3) were already added in Phase 2 (step_2_2_clean.py).
+**Note:** Temporal features (hour_of_day, day_of_week, season, is_nighttime) are added during Phase 2 cleaning in `pipeline/clean.py`. Phase 3 focuses on vessel, spatial, and behavioral features.
 
 ### Step 3.5: Cross-Source Enrichment ✅
 
-**Script:** `src/data/step_3_5_enrichment.py`
+**Script:** `src/data/pipeline/enrich.py`
 **Output:** `gfw_events_full.parquet` (512,247 rows × 121 cols, 80.7 MB)
 
 **Actions performed:**
@@ -316,15 +316,20 @@ Detect "dark vessels" by comparing SAR detections against AIS data within ±6h a
 ```
 src/data/
 ├── constants.py              # Shared: FLAG_MAP, INDONESIA_BBOX, paths, filenames
-├── loaders.py                # Step 1.1: GFW Events → gfw_events_flat.parquet
-├── loaders_sar_effort.py     # Step 1.2: SAR + Effort → 2 parquets
-├── loaders_aux.py            # Steps 1.3-1.5: Registry, Zenodo, Weather, VIIRS, Ports
-├── step_2_1_dedup.py         # Step 2.1: Deduplication
-├── step_2_2_clean.py         # Steps 2.2-2.6: Clean & validate events
-├── step_2_7_clean_rest.py    # Step 2.7: Clean SAR/Effort/Zenodo
-├── step_3_1_vessel_features.py  # Step 3.1: Vessel profile + spatial features
-├── step_3_4_behavioral.py    # Step 3.4: Per-vessel behavioral features
-└── step_3_5_enrichment.py    # Step 3.5: Cross-source enrichment
+├── pipeline/
+│   ├── extract.py            # Phase 1: Load & flatten all raw data
+│   ├── clean.py              # Phase 2: Dedup, validate, normalize
+│   ├── features.py           # Phase 3a: Vessel profile + behavioral features
+│   └── enrich.py             # Phase 3b: Cross-source enrichment
+├── clients/
+│   ├── gfw.py                # GFW API client
+│   └── bps.py                # BPS weather/statistics client
+├── generators/
+│   ├── synthetic.py          # AIS trajectory generator
+│   ├── viirs.py              # VIIRS sample data
+│   ├── mpa.py                # MPA sample data
+│   └── weather.py            # Weather sample data
+└── constants.py              # Shared constants (FLAG_MAP, BBOX, paths)
 
 scripts/
 └── run_pipeline.py           # Master runner: --phase/--step args

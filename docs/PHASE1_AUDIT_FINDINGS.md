@@ -10,7 +10,7 @@
 ### 1. MMSI Field Mapping ✅ FIXED
 - `vessel.ssvid` is the MMSI field in GFW data, **not** `vessel.mmsi`
 - All loaders use `vessel.ssvid` → renamed to `mmsi` in output
-- MMSI is `large_string` type across all files (explicitly cast in loaders_aux.py)
+- MMSI is `large_string` type across all files (explicitly cast in pipeline/extract.py)
 
 ### 2. Encounter Events (Dual Vessel) ✅ DOCUMENTED
 - Encounter events contain **2 vessels**: primary in `vessel` key, secondary in `encounter.vessel` key
@@ -67,7 +67,7 @@ All Phase 1 issues from the original audit have been resolved:
 
 | Issue | Status | Fix |
 |-------|--------|-----|
-| MMSI int64 in vessel_registry | ✅ Fixed | Cast to string in loaders_aux.py |
+| MMSI int64 in vessel_registry | ✅ Fixed | Cast to string in pipeline/extract.py |
 | Zenodo 30M rows (global, unfiltered) | ✅ Fixed | Spatial bbox filter applied during load |
 | VIIRS date_gmt int64 | ✅ Fixed | Parsed with `pd.to_datetime(str, format="%Y%m%d")` |
 | Weather only 4 zones mapped | ✅ Fixed | All 8 zones mapped in enrichment |

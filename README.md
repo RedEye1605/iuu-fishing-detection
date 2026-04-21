@@ -35,28 +35,26 @@ gemastik/
 │   ├── data/
 │   │   ├── __init__.py
 │   │   ├── constants.py           # Shared constants (paths, flags, bbox)
-│   │   ├── loaders.py              # Phase 1 Step 1.1: GFW events loader
-│   │   ├── loaders_sar_effort.py    # Phase 1 Step 1.2: SAR & fishing effort loader
-│   │   ├── loaders_aux.py          # Phase 1 Steps 1.3-1.5: Auxiliary data loader
-│   │   ├── step_2_1_dedup.py       # Phase 2 Step 2.1: Deduplication
-│   │   ├── step_2_2_clean.py       # Phase 2 Steps 2.2-2.6: Clean & validate
-│   │   ├── step_2_7_clean_rest.py  # Phase 2 Step 2.7: Clean remaining datasets
-│   │   ├── step_3_1_vessel_features.py  # Phase 3 Step 3.1: Vessel features
-│   │   ├── step_3_4_behavioral.py  # Phase 3 Step 3.4: Behavioral features
-│   │   ├── step_3_5_enrichment.py  # Phase 3 Step 3.5: Cross-source enrichment
-│   │   ├── gfw_client.py        # GFW API client (events, SAR, effort)
-│   │   ├── bps_client.py        # BPS fisheries statistics
-│   │   ├── synthetic.py         # Synthetic AIS data generator
-│   │   ├── viirs_setup.py       # VIIRS boat detection setup
-│   │   ├── mpa_setup.py         # Marine Protected Area boundaries
-│   │   └── weather_client.py    # BMKG marine weather data
+│   │   ├── pipeline/                    # Data processing pipeline
+│   │   ├── extract.py            # Phase 1: Load & flatten raw data
+│   │   ├── clean.py              # Phase 2: Dedup, validate, normalize
+│   │   ├── features.py           # Phase 3a: Vessel + behavioral features
+│   │   └── enrich.py             # Phase 3b: Cross-source enrichment
+│   ├── clients/                 # API clients
+│   │   ├── gfw.py               # GFW API (events, SAR, effort)
+│   │   └── bps.py               # BPS fisheries statistics
+│   ├── generators/              # Synthetic/sample data generators
+│   │   ├── synthetic.py         # AIS trajectory generator
+│   │   ├── viirs.py             # VIIRS sample data
+│   │   ├── mpa.py               # MPA sample data
+│   │   └── weather.py           # Weather sample data
 │   ├── features/
 │   │   └── graph_builder.py     # ST-GAT graph construction (placeholder)
 │   ├── models/
 │   │   └── stgat.py             # ST-GAT model architecture (placeholder)
 │   └── utils/
 │       ├── config.py            # Centralized configuration
-│       └── geo_utils.py         # Geospatial utility functions
+│       └── geo.py                # Geospatial utilities
 ├── scripts/
 │   ├── run_pipeline.py          # Master pipeline runner (Phase 1-3)
 │   ├── pull_sar_data.py         # GFW 4Wings SAR data puller

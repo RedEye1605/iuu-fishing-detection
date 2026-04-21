@@ -24,7 +24,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from src.data.gfw_client import GFWClient
+from src.data.clients.gfw import GFWClient
 from src.utils.config import app_config
 
 logging.basicConfig(

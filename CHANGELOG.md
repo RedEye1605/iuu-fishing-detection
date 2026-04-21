@@ -37,7 +37,7 @@ All 9 pipeline steps re-executed from raw data with all fixes applied.
 - **VIIRS date parsing:** Fixed `date_gmt` (int64) → proper date via `pd.to_datetime(str, format="%Y%m%d")`
 - **Column name collisions:** Fixed `_x/_y` suffix artifacts from behavioral merge
 - **Zenodo spatial filter:** Applied bbox filter during loading, not just flag filter
-- **Zenodo clean index leak:** Added `index=False` safeguard in step_2_7 ParquetWriter
+- **Zenodo clean index leak:** Added `index=False` safeguard in clean.py ParquetWriter
 
 ### Performance Fixes
 - **Vectorized sea_zone:** Replaced `df.apply()` with `np.select()` — 100x faster
@@ -105,9 +105,7 @@ All 9 pipeline steps re-executed from raw data with all fixes applied.
 
 ## v0.2.0 - Phase 1: Load & Flatten (2026-04-21)
 
-- **loaders.py:** GFW events → gfw_events_flat.parquet (54 cols)
-- **loaders_sar_effort.py:** SAR + effort → 2 parquets (13 cols each)
-- **loaders_aux.py:** Registry, Zenodo, weather, VIIRS, ports → 5 parquets
+- **pipeline/extract.py:** All raw data → 8 flat parquet files (loaders, SAR, effort, registry, Zenodo, weather, VIIRS, ports)
 - Fixed Zenodo 2021 corrupted zip (redownloaded)
 - Updated .gitignore
 

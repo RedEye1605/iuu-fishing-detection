@@ -139,11 +139,11 @@ The following critical issues were identified in the initial audit and have been
 
 ### 🔴 Critical → ✅ Fixed
 
-1. **MMSI type mismatch** — vessel_registry MMSI was `int64`, events were `string`. Fixed: MMSI explicitly cast to string in loaders_aux.py. Join rate improved from broken to 50.3%.
+1. **MMSI type mismatch** — vessel_registry MMSI was `int64`, events were `string`. Fixed: MMSI explicitly cast to string in pipeline/extract.py. Join rate improved from broken to 50.3%.
 
 2. **No master pipeline runner** — Fixed: `scripts/run_pipeline.py` with `--phase` and `--step` args.
 
-3. **`__index_level_0__` column in zenodo** — Fixed: `index=False` safeguard in step_2_7 ParquetWriter. Verified absent.
+3. **`__index_level_0__` column in zenodo** — Fixed: `index=False` safeguard in clean.py ParquetWriter. Verified absent.
 
 4. **VIIRS date join failure** — Fixed: `pd.to_datetime(viirs["date_gmt"].astype(str), format="%Y%m%d").dt.date` for proper date comparison.
 
@@ -151,7 +151,7 @@ The following critical issues were identified in the initial audit and have been
 
 5. **Weather enrichment 22% coverage** — Fixed: All 8 weather zones now mapped. Near-100% enrichment.
 
-6. **Column name collisions (_x/_y)** — Fixed: Duplicate columns dropped before merge in step_3_5.
+6. **Column name collisions (_x/_y)** — Fixed: Duplicate columns dropped before merge in enrich.py.
 
 7. **`unique_grid_cells` bug** — Fixed: Two-stage groupby approach instead of broken lambda.
 
@@ -187,25 +187,24 @@ All pipeline scripts use:
 ## 7. Pipeline Flow
 
 ```
-Phase 1 (Load):
-  GFW JSON.gz ──→ loaders.py ──→ gfw_events_flat.parquet (54 cols)
-  GFW 4Wings   ──→ loaders_sar_effort.py ──→ sar_presence_flat.parquet (13 cols)
-                                       ──→ fishing_effort_flat.parquet (13 cols)
-  Zenodo/Other ──→ loaders_aux.py ──→ vessel_registry.parquet (12 cols, MMSI string)
-                                  ──→ zenodo_effort_flat.parquet (10 cols, spatially filtered)
-                                  ──→ weather.parquet (9 cols)
-                                  ──→ viirs_detections.parquet (8 cols)
-                                  ──→ ports.parquet (3 cols)
+Phase 1 (Extract):
+  pipeline/extract.py ──→ gfw_events_flat.parquet (54 cols)
+                      ──→ sar_presence_flat.parquet (13 cols)
+                      ──→ fishing_effort_flat.parquet (13 cols)
+                      ──→ vessel_registry.parquet (12 cols, MMSI string)
+                      ──→ zenodo_effort_flat.parquet (10 cols, spatially filtered)
+                      ──→ weather.parquet (9 cols)
+                      ──→ viirs_detections.parquet (8 cols)
+                      ──→ ports.parquet (3 cols)
 
 Phase 2 (Clean):
-  step_2_1_dedup.py ──→ Dedup all datasets
-  step_2_2_clean.py ──→ gfw_events_clean.parquet (66 cols)
-  step_2_7_clean_rest.py ──→ sar/effort/zenodo_clean.parquet
+  pipeline/clean.py ──→ Dedup + validate + normalize all datasets
+                   ──→ gfw_events_clean.parquet (66 cols)
+                   ──→ sar/effort/zenodo_clean.parquet
 
-Phase 3 (Feature Engineering):
-  step_3_1_vessel_features.py ──→ Registry join + spatial features
-  step_3_4_behavioral.py ──→ vessel_behavioral_features.parquet (32 cols)
-  step_3_5_enrichment.py ──→ gfw_events_full.parquet (121 cols) ← FINAL
+Phase 3 (Features + Enrichment):
+  pipeline/features.py ──→ Vessel profiles + behavioral features (32 cols)
+  pipeline/enrich.py   ──→ gfw_events_full.parquet (121 cols) ← FINAL
 ```
 
 ---
