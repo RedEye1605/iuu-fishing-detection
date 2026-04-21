@@ -106,6 +106,26 @@ uv pip install geopandas shapely folium requests beautifulsoup4 pyogrio
 uv pip install torch torch_geometric scikit-learn matplotlib seaborn
 ```
 
+### Download Large Dataset (>100MB)
+
+The Zenodo historical effort files are distributed via [GitHub Release](https://github.com/RedEye1605/iuu-fishing-detection/releases/tag/v1.0-data).
+
+```bash
+# Option 1: Setup script (requires gh CLI)
+./scripts/download_large_data.sh
+
+# Option 2: Manual — download from the release page and extract to data/raw/zenodo/
+```
+
+| File | Size | Description |
+|------|------|-------------|
+| `fleet-monthly-csvs-10-v3-2020.zip` | 111 MB | 2020 fishing effort |
+| `fleet-monthly-csvs-10-v3-2021.zip` | 115 MB | 2021 fishing effort |
+| `fleet-monthly-csvs-10-v3-2022.zip` | 122 MB | 2022 fishing effort |
+| `fleet-monthly-csvs-10-v3-2023.zip` | 133 MB | 2023 fishing effort |
+| `fleet-monthly-csvs-10-v3-2024.zip` | 126 MB | 2024 fishing effort |
+| `fishing-vessels-v3.csv` | 110 MB | Global fishing vessel registry |
+
 ---
 
 ## 📅 Timeline (Gemastik XIX 2026)
