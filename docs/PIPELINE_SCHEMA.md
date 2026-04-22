@@ -185,3 +185,43 @@ Per-split snapshot data with int64 numpy arrays:
 - Test: 2024-W27 → 2025-W16 (42 snapshots, 75K events, 15%)
 
 **No temporal leakage:** strict chronological ordering, no overlap.
+
+---
+
+## Model Output Files (Phase 7)
+
+All files in `data/processed/model/`. Direct consumption by PyG model.
+
+### `node_features.npy`
+(14857, 39) float32 numpy array. All-numeric node feature matrix.
+
+**NO NaN, NO INF, Normalized (mean≈0, std≈1)**
+
+### `node_labels.npy`
+(14857,) int64 numpy array. Vessel-level IUU labels (0=normal, 1=suspicious, 2=probable, 3=hard).
+
+### `class_weights.npy`
+(4,) float32 array. Inverse-frequency weights: [1.61, 0.41, 1.57, 3.61].
+
+### `vessel_flag_embed.npy`
+(128, 8) float32 array. Xavier init for flag embedding lookup.
+
+### `vessel_class_embed.npy`
+(17, 8) float32 array. Xavier init for class embedding lookup.
+
+### `feature_names.json`
+Ordered list of 39 feature names.
+
+### `encoders.pkl`
+LabelEncoder objects + frequency maps.
+
+### `mmsi_index.json`
+MMSI → global node index mapping.
+
+### `snapshots/{split}_snapshots.pkl`
+Consolidated snapshot data (not 1000+ npy files):
+- train: 215 snapshots (vessel_indices, edge_index, edge_type, labels)
+- val: 26 snapshots
+- test: 42 snapshots
+
+Model config: in_channels=39, num_classes=4

@@ -375,7 +375,124 @@ Original plan used event-level nodes (512K nodes). This would require ~244GB for
 
 ---
 
-## Phase 6: Dataset Split & Export — TODO
+## Phase 6: Dataset Split & Export ✅ COMPLETE
+
+### Step 6.1: Temporal Train/Val/Test Split ✅
+
+**Script:** `src/data/pipeline/split.py`
+
+Strict temporal split — no data leakage by time:
+| Split | Weeks | Snapshots | Events | % | Description |
+|-------|-------|-----------|-------|-------------|
+| **Train** | 2018-W10 to 2023-W52 | 215 | 379,596 | 74.1% | 2020–2023 (2020-2023 from 2024-W27 onward) |
+| **Val** | 2024-W01 to 2024-W26 | 26 | 57,838 | 11.3% | First half of 2024 |
+| **Test** | 2024-W27 to 2025-W16 | 42 | 74,762 | 14.6% | Second half of 2024 + 2025 (partial) |
+
+**Note:** Temporal split is **not stratified** — class/flag distributions shift across splits (expected for spatiotemporal data). Class weights computed in Phase 7 handle imbalance.
+
+### Step 6.2: Output Files ✅
+
+```
+data/processed/split/
+├── snapshot_split.json          # Mapping: week → train/val/test
+├── split_stats.json            # Per-split: events, vessels, edges, label/flag distributions
+├── train/
+│   └── snapshot_data.pkl     # 215 weekly snapshots (vessel_indices, edge_index, edge_type, labels)
+├── val/
+│   └── snapshot_data.pkl     # 26 weekly snapshots (same format)
+└── test/
+    └── snapshot_data.pkl     # 42 weekly snapshots (same format)
+```
+
+---
+
+## Phase 7: Model Data Preparation ✅ COMPLETE
+
+### Overview
+
+Transforms pipeline output into model-ready PyTorch Geometric tensors. Handles categorical encoding, class weights, and PyG-compatible snapshot data.
+
+**Script:** `src/data/pipeline/prepare.py`
+
+### Step 7.1: Categorical Feature Encoding ✅
+
+- **vessel_flag** (127 unique) → Frequency encoding (proxy for regulatory oversight) + label code (128 classes for embedding)
+- **reg_vessel_class** (17 unique) → Label encoding (for embedding lookup)
+- **Timestamps** → `first_seen`, `last_seen` dropped (model uses snapshot indices)
+- **mmsi** → MMSI → index mapping saved separately (model uses positional indices)
+
+### Step 7.2: Class Weights ✅
+
+Inverse-frequency weighting for imbalanced 4-class problem:
+```python
+class_weights = [1.61, 0.41, 1.57, 3.61]  # normal, suspicious, probable, hard
+```
+
+- Hard_IUU gets 3.6× weight (3.6% of data)
+- Suspicious gets 0.41× downweight (61.7% of data)
+- Normal gets 1.61× boost (minority class)
+
+### Step 7.3: Embedding Initialization ✅
+
+Xavier uniform init for embedding tables:
+- `vessel_flag_embed.npy`: (128, 8) — flag embedding lookup
+- `vessel_class_embed.npy`: (17, 8) — vessel class embedding lookup
+
+### Step 7.4: Model-Ready Output Files ✅
+
+```
+data/processed/model/
+├── node_features.npy              # (14857, 39) float32 — normalized features, NO NaN/Inf
+├── node_labels.npy                # (14857,) int64 — 4-class labels (0-3)
+├── feature_names.json             # Ordered list of 39 feature names
+├── class_weights.npy              # (4,) float32 — class weights for loss function
+├── mmsi_index.json               # MMSI → global node index mapping
+├── encoders.pkl                  # Contains LabelEncoder objects for flag/class
+├── vessel_flag_embed.npy          # (128, 8) float32 — Xavier init for flag embedding
+├── vessel_class_embed.npy         # (17, 8) float32 — Xavier init for class embedding
+└── snapshots/
+    ├── train_snapshots.pkl        # 215 snapshots (edge_index, edge_type, vessel_indices, labels)
+    ├── val_snapshots.pkl          # 26 snapshots (same format)
+    └── test_snapshots.pkl         # 42 snapshots (same format)
+```
+
+### Snapshot Data Format (PyG-Ready)
+
+Each snapshot pickle contains:
+```python
+{
+  "order": ["2018_W10", ..., "2023_W52"],  # Chronological snapshot IDs
+  "data": {
+    "YYYY_Www": {
+      "vessel_indices": np.array([0, 1, 5, ...]),  # [V] int64
+      "edge_index": np.stack([src, dst]),              # [2, E] int64
+      "edge_type": np.array([0, 0, 1, 1, ...]),        # [E] int64 (0=encounter, 1=colocation)
+      "labels": np.array([1, 0, 2, ...]),             # [V] int64 (0-3)
+    },
+    ...
+  }
+}
+```
+
+### Model Config
+
+```python
+in_channels = 39      # Number of input features
+num_classes = 4        # 4-class classification (normal, suspicious, probable, hard)
+flag_embed_dim = 8    # Embedding dimension for vessel flag
+class_embed_dim = 8   # Embedding dimension for vessel class
+```
+
+### Validation (2026-04-22)
+- ✅ NaN: 0, Inf: 0 in node features
+- ✅ Normalization: mean≈0, std≈1 (StandardScaler applied)
+- ✅ Labels ∈ [0, 3]
+- ✅ No label leakage: max feature→label r=0.48
+- ✅ Edge integrity: all edges reference valid node indices
+
+---
+
+## Phase 8: ST-GAT Model — TODO
 
 ### Step 6.1: Temporal Train/Val/Test Split
 - Train: 2020–2023 (80%)

@@ -175,6 +175,34 @@ Score normalized to [0, 1]; threshold-based label assignment.
 | `colocation_edges.parquet` | 477,914 | — | Co-location edges (temporally scoped) |
 | `snapshot_metadata.parquet` | 283 | — | Weekly graph snapshot stats |
 | `feature_scaler.pkl` | — | — | StandardScaler for inference |
+| **Model Data (Phase 7)** |
+| `node_features.npy` | 14,857 | 39 | All-numeric, normalized (mean=0, std=1) |
+| `node_labels.npy` | 14,857 | — | 4-class labels (0-3) |
+| `class_weights.npy` | — | 4 | Inverse-frequency weights |
+| `vessel_flag_embed.npy` | — | (128, 8) | Xavier init for flag embedding |
+| `vessel_class_embed.npy` | — | (17, 8) | Xavier init for class embedding |
+| `encoders.pkl` | — | — | LabelEncoder objects + frequency maps |
+| `mmsi_index.json` | — | — | MMSI → global node index |
+| `snapshots/train_snapshots.pkl` | — | — | 215 weekly snapshots (PyG format) |
+| `snapshots/val_snapshots.pkl` | — | — | 26 weekly snapshots (PyG format) |
+| `snapshots/test_snapshots.pkl` | — | — | 42 weekly snapshots (PyG format) |
+
+### Model Config (Phase 7)
+
+```python
+in_channels = 39        # Input features per vessel
+num_classes = 4          # 4-class classification (normal, suspicious, probable, hard)
+flag_embed_dim = 8       # Embedding dimension for vessel flag (128 classes)
+class_embed_dim = 8      # Embedding dimension for vessel class (17 classes)
+```
+
+**Class weights:** `[1.61, 0.41, 1.57, 3.61]` — apply to CrossEntropyLoss
+
+**Encoding strategy:**
+- `vessel_flag`: frequency encoding (regulatory oversight proxy) + label code for embedding
+- `reg_vessel_class`: label encoding for embedding lookup
+- Timestamps dropped: `first_seen`, `last_seen` (model uses snapshot positions)
+- `mmsi`: mapped to global node index via `mmsi_index.json`
 
 ### Feature Categories (111 columns)
 
