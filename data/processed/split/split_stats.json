@@ -1,52 +1,52 @@
 {
   "train": {
-    "n_events": 379372,
-    "pct_events": 74.1,
-    "n_vessels": 12871,
-    "n_snapshots": 210,
-    "total_edges": 289816,
-    "encounter_edges": 36807,
-    "colocation_edges": 253009,
+    "n_events": 374415,
+    "pct_events": 73.1,
+    "n_vessels": 12269,
+    "n_snapshots": 208,
+    "total_edges": 231732,
+    "encounter_edges": 36457,
+    "colocation_edges": 195275,
     "label_distribution": {
       "hard_iuu": 0.171,
-      "normal": 0.265,
+      "normal": 0.261,
       "probable_iuu": 0.072,
-      "suspicious": 0.492
+      "suspicious": 0.496
     },
     "flag_distribution": {
-      "domestic": 0.493,
-      "foreign": 0.507
+      "domestic": 0.494,
+      "foreign": 0.506
     },
     "event_type_distribution": {
       "encounter": 0.097,
       "fishing": 0.493,
-      "loitering": 0.305,
+      "loitering": 0.304,
       "port_visit": 0.105
     }
   },
   "val": {
-    "n_events": 57838,
-    "pct_events": 11.3,
-    "n_vessels": 4459,
-    "n_snapshots": 26,
-    "total_edges": 39005,
-    "encounter_edges": 3578,
-    "colocation_edges": 35427,
+    "n_events": 53577,
+    "pct_events": 10.5,
+    "n_vessels": 4399,
+    "n_snapshots": 24,
+    "total_edges": 25360,
+    "encounter_edges": 2994,
+    "colocation_edges": 22366,
     "label_distribution": {
-      "hard_iuu": 0.231,
-      "normal": 0.286,
-      "probable_iuu": 0.149,
-      "suspicious": 0.334
+      "hard_iuu": 0.228,
+      "normal": 0.284,
+      "probable_iuu": 0.147,
+      "suspicious": 0.341
     },
     "flag_distribution": {
-      "domestic": 0.393,
-      "foreign": 0.607
+      "domestic": 0.39,
+      "foreign": 0.61
     },
     "event_type_distribution": {
-      "encounter": 0.062,
-      "fishing": 0.648,
-      "loitering": 0.2,
-      "port_visit": 0.091
+      "encounter": 0.056,
+      "fishing": 0.641,
+      "loitering": 0.215,
+      "port_visit": 0.088
     }
   },
   "test": {
@@ -54,14 +54,14 @@
     "pct_events": 14.6,
     "n_vessels": 1457,
     "n_snapshots": 42,
-    "total_edges": 49382,
+    "total_edges": 37935,
     "encounter_edges": 5854,
-    "colocation_edges": 43528,
+    "colocation_edges": 32081,
     "label_distribution": {
-      "hard_iuu": 0.309,
-      "normal": 0.29,
-      "probable_iuu": 0.183,
-      "suspicious": 0.218
+      "hard_iuu": 0.31,
+      "normal": 0.284,
+      "probable_iuu": 0.182,
+      "suspicious": 0.224
     },
     "flag_distribution": {
       "domestic": 0.418,

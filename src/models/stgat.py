@@ -1,12 +1,26 @@
 """
 Spatiotemporal Graph Attention Network (ST-GAT) for IUU fishing detection.
 
-Architecture overview:
-- Spatial GAT layers with edge-type-specific attention
-- Temporal attention over time-adjacent points
-- Binary classification output (IUU vs. normal)
+Architecture:
+- Input: Per-vessel node features [N, F] + embedding indices
+- Spatial encoder: 2-layer GATv2Conv with edge-type-specific attention
+- Temporal encoder: GRU over snapshot sequence
+- Classification head: MLP → 4-class logits (normal/suspicious/probable_iuu/hard_iuu)
 
-Placeholder for Phase 3 — will be replaced with full PyTorch Geometric implementation.
+Key design decisions (research-backed):
+- GATv2Conv (Brody et al., 2022): dynamic attention over concatenation, more expressive
+  than standard GAT for learning complex vessel-vessel interactions.
+- Edge-type-aware: separate attention for encounter vs co-location edges
+  (encounter = stronger IUU signal, co-location = proximity context).
+- Residual connections: prevent over-smoothing in deeper GNN layers (Li et al., 2018).
+- Label smoothing: handles noisy rule-based labels (Szegedy et al., 2016).
+- Class weights: inverse frequency weighting for imbalanced IUU distribution.
+
+References:
+- Velickovic et al. (2018) "Graph Attention Networks" — original GAT
+- Brody et al. (2022) "How Attentive are Graph Attention Networks?" — GATv2
+- Rossi et al. (2020) "Temporal Graph Networks" — temporal message passing
+- Miller et al. (2018) "Stopping the hidden hunt for seafood" — GFW encounter methodology
 """
 
 from __future__ import annotations
@@ -17,233 +31,445 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch_geometric.nn import GATv2Conv
+from torch_geometric.utils import scatter
 
 logger = logging.getLogger(__name__)
 
+NUM_CLASSES = 4
+LABEL_NAMES = ["normal", "suspicious", "probable_iuu", "hard_iuu"]
 
-class STGATError(Exception):
-    """Base exception for ST-GAT model errors."""
 
-
-class GATLayer(nn.Module):
-    """Graph Attention Layer (Velickovic et al., 2018).
+class VesselEmbedding(nn.Module):
+    """Learned embeddings for categorical vessel attributes.
 
     Args:
-        in_features: Input feature dimension.
-        out_features: Output feature dimension per head.
-        num_heads: Number of attention heads.
+        num_flags: Number of unique vessel flags.
+        num_classes: Number of unique vessel classes.
+        embed_dim: Embedding dimension.
+        continuous_dim: Number of continuous input features.
         dropout: Dropout rate.
-        concat: Concatenate heads if True, average if False.
     """
 
     def __init__(
         self,
-        in_features: int,
-        out_features: int,
-        num_heads: int = 4,
-        dropout: float = 0.3,
-        concat: bool = True,
+        num_flags: int = 128,
+        num_classes: int = 17,
+        embed_dim: int = 8,
+        continuous_dim: int = 40,
+        dropout: float = 0.2,
     ) -> None:
         super().__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.num_heads = num_heads
-        self.concat = concat
-        self.dropout_rate = dropout
-
-        self.W = nn.Parameter(torch.zeros(in_features, out_features * num_heads))
-        self.a = nn.Parameter(torch.zeros(2 * out_features * num_heads, 1))
-        self.leakyrelu = nn.LeakyReLU(0.2)
-        self._init_parameters()
-
-    def _init_parameters(self) -> None:
-        """Xavier-initialize learnable parameters."""
-        nn.init.xavier_uniform_(self.W)
-        nn.init.xavier_uniform_(self.a)
+        self.flag_embedding = nn.Embedding(num_flags, embed_dim)
+        self.class_embedding = nn.Embedding(num_classes, embed_dim)
+        self.embed_dropout = nn.Dropout(dropout)
+        self.input_proj = nn.Linear(continuous_dim + 2 * embed_dim, continuous_dim)
+        self.output_dim = continuous_dim
 
     def forward(
         self,
-        h: torch.Tensor,
-        edge_index: torch.Tensor,
-        edge_attr: Optional[torch.Tensor] = None,
+        x_cont: torch.Tensor,
+        flag_idx: Optional[torch.Tensor] = None,
+        class_idx: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """Forward pass.
+        """Combine continuous features with learned embeddings.
 
         Args:
-            h: Node features [num_nodes, in_features].
-            edge_index: Edge indices [2, num_edges].
-            edge_attr: Optional edge attributes.
+            x_cont: Continuous features [N, continuous_dim].
+            flag_idx: Vessel flag indices [N].
+            class_idx: Vessel class indices [N].
 
         Returns:
-            Updated node features.
+            Fused feature matrix [N, output_dim].
         """
-        Wh = torch.matmul(h, self.W)
+        embeds = []
+        if flag_idx is not None:
+            embeds.append(self.flag_embedding(flag_idx))
+        if class_idx is not None:
+            embeds.append(self.class_embedding(class_idx))
 
-        num_edges = edge_index.shape[1]
-        if num_edges == 0:
-            return F.elu(Wh)
+        if embeds:
+            x_cat = torch.cat([x_cont] + embeds, dim=-1)
+            x_cat = self.embed_dropout(x_cat)
+            return self.input_proj(x_cat)
+        return x_cont
 
-        # Attention scores
-        a_input = (Wh[edge_index[0]] * Wh[edge_index[1]]).sum(dim=-1).unsqueeze(-1)
-        a_input = a_input.repeat(1, 2)
-        e = self.leakyrelu(torch.matmul(a_input, self.a).squeeze(-1))
 
-        if edge_attr is not None and edge_attr.numel() > 0:
-            e = e * edge_attr.squeeze(-1)
+class SpatialGATEncoder(nn.Module):
+    """Multi-layer GATv2 spatial encoder with residual connections.
 
-        attention = F.softmax(e, dim=0)
-        attention = F.dropout(attention, p=self.dropout_rate, training=self.training)
+    Args:
+        in_dim: Input feature dimension.
+        hidden_dim: Hidden dimension.
+        out_dim: Output dimension.
+        num_heads: Attention heads.
+        dropout: Dropout rate.
+        edge_types: Number of edge types for type-specific processing.
+        edge_dim: Edge attribute dimension (e.g., 2 for [duration, distance]).
+    """
 
-        h_prime = torch.zeros_like(Wh)
-        for i in range(num_edges):
-            src, dst = edge_index[:, i]
-            h_prime[dst] += attention[i] * Wh[src]
+    def __init__(
+        self,
+        in_dim: int,
+        hidden_dim: int = 64,
+        out_dim: int = 64,
+        num_heads: int = 4,
+        dropout: float = 0.3,
+        edge_types: int = 2,
+        edge_dim: int = 2,
+    ) -> None:
+        super().__init__()
 
-        return F.elu(h_prime)
+        self.edge_types = edge_types
+        self.num_heads = num_heads
+        self.hidden_dim = hidden_dim
+
+        # Per edge-type GATv2 layers — first layer
+        # GATv2Conv concat=True: output = heads * out_channels_per_head
+        # We want total output = hidden_dim, so per_head = hidden_dim / heads
+        self.conv1 = nn.ModuleList([
+            GATv2Conv(
+                in_dim, hidden_dim // num_heads, heads=num_heads,
+                dropout=dropout, concat=True, add_self_loops=True,
+                edge_dim=edge_dim,
+            )
+            for _ in range(edge_types)
+        ])
+        self.norm1 = nn.ModuleList([nn.LayerNorm(hidden_dim) for _ in range(edge_types)])
+        self.dropout1 = nn.Dropout(dropout)
+
+        # Input projection for first-layer residual (in_dim → hidden_dim)
+        if in_dim != hidden_dim:
+            self.input_proj = nn.Linear(in_dim, hidden_dim, bias=False)
+        else:
+            self.input_proj = None
+
+        # Second layer (same dim → residual works)
+        self.conv2 = nn.ModuleList([
+            GATv2Conv(
+                hidden_dim, hidden_dim // num_heads, heads=num_heads,
+                dropout=dropout, concat=True, add_self_loops=True,
+                edge_dim=edge_dim,
+            )
+            for _ in range(edge_types)
+        ])
+        self.norm2 = nn.ModuleList([nn.LayerNorm(hidden_dim) for _ in range(edge_types)])
+        self.dropout2 = nn.Dropout(dropout)
+
+        # Learnable type weights — attention over edge types
+        self.type_weights = nn.Parameter(torch.zeros(edge_types))
+        nn.init.zeros_(self.type_weights)
+
+        # Project back to out_dim
+        self.proj = nn.Linear(hidden_dim, out_dim)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        edge_index: torch.Tensor,
+        edge_type: torch.Tensor,
+        edge_attr: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """Apply edge-type-specific GATv2 with residual connections.
+
+        Args:
+            x: Node features [N, in_dim].
+            edge_index: Edge indices [2, E].
+            edge_type: Edge type per edge [E] (0=encounter, 1=colocation).
+            edge_attr: Optional edge attributes [E, d].
+
+        Returns:
+            Updated node features [N, out_dim].
+        """
+        type_weights = F.softmax(self.type_weights, dim=0)
+        out = torch.zeros(x.size(0), self.hidden_dim, device=x.device)
+
+        # Project input for residual connection
+        x_proj = self.input_proj(x) if self.input_proj is not None else x
+
+        for et in range(self.edge_types):
+            mask = edge_type == et
+            if mask.sum() == 0:
+                continue
+
+            et_edges = edge_index[:, mask]
+            et_weight = type_weights[et]
+
+            # Layer 1 with residual
+            h = self.dropout1(x)
+            h = F.elu(self.conv1[et](h, et_edges, edge_attr=et_edge_attr(edge_attr, mask)))
+            h = self.norm1[et](h + x_proj)
+
+            # Layer 2 with residual
+            h2 = self.dropout2(h)
+            h2 = F.elu(self.conv2[et](h2, et_edges, edge_attr=et_edge_attr(edge_attr, mask)))
+            h2 = self.norm2[et](h2 + h)
+
+            out = out + et_weight * h2
+
+        return self.proj(out)
+
+
+class TemporalEncoder(nn.Module):
+    """GRU-based temporal encoder over snapshot sequence.
+
+    Args:
+        input_dim: Input feature dimension per snapshot.
+        hidden_dim: GRU hidden dimension.
+        num_layers: Number of GRU layers.
+        dropout: Dropout between GRU layers.
+    """
+
+    def __init__(
+        self,
+        input_dim: int = 64,
+        hidden_dim: int = 64,
+        num_layers: int = 1,
+        dropout: float = 0.2,
+    ) -> None:
+        super().__init__()
+        self.gru = nn.GRU(
+            input_dim, hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0,
+        )
+        self.norm = nn.LayerNorm(hidden_dim)
+
+    def forward(
+        self,
+        x_seq: torch.Tensor,
+        h0: Optional[torch.Tensor] = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Encode temporal sequence of snapshot features.
+
+        Args:
+            x_seq: Sequence of node features [N, T, input_dim].
+            h0: Initial hidden state [num_layers, N, hidden_dim].
+
+        Returns:
+            Tuple of (final hidden [N, hidden_dim], all hidden states).
+        """
+        out, hn = self.gru(x_seq, h0)
+        hn = self.norm(hn[-1])
+        return hn, out
 
 
 class STGAT(nn.Module):
     """Spatiotemporal Graph Attention Network for IUU fishing detection.
 
-    Combines spatial GNN with temporal attention for anomaly detection.
+    Combines:
+    1. Learned embeddings for categorical vessel attributes (flag, class)
+    2. Spatial GATv2 encoder with edge-type-specific attention + residual connections
+    3. Temporal GRU encoder over weekly snapshot sequence
+    4. MLP classification head → 4-class logits
 
     Args:
-        input_dim: Input node feature dimension.
-        hidden_dim: Hidden layer dimension.
-        output_dim: Output embedding dimension.
-        num_edge_types: Number of edge types (spatial, temporal, etc.).
-        num_heads: Attention heads per layer.
+        continuous_dim: Continuous feature dimension.
+        num_flags: Number of unique vessel flags.
+        num_vessel_classes: Number of unique vessel classes.
+        embed_dim: Embedding dimension for categorical features.
+        hidden_dim: Hidden dimension for GAT and GRU.
+        num_heads: Attention heads per GAT layer.
         dropout: Dropout rate.
-        use_temporal: Whether to include temporal attention.
+        num_edge_types: Number of edge types (default 2: encounter, colocation).
+        label_smoothing: Smoothing factor for label noise (0.0 = disabled).
     """
 
     def __init__(
         self,
-        input_dim: int = 8,
+        continuous_dim: int = 40,
+        num_flags: int = 128,
+        num_vessel_classes: int = 17,
+        embed_dim: int = 8,
         hidden_dim: int = 64,
-        output_dim: int = 32,
-        num_edge_types: int = 2,
         num_heads: int = 4,
         dropout: float = 0.3,
-        use_temporal: bool = True,
+        num_edge_types: int = 2,
+        label_smoothing: float = 0.1,
     ) -> None:
         super().__init__()
-        self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-        self.num_edge_types = num_edge_types
-        self.use_temporal = use_temporal
+        self.label_smoothing = label_smoothing
 
-        # Spatial GAT layers per edge type
-        self.spatial_gat = nn.ModuleList([
-            nn.ModuleDict({
-                "attention": GATLayer(
-                    input_dim if i == 0 else hidden_dim,
-                    hidden_dim, num_heads, dropout,
-                ),
-                "norm": nn.LayerNorm(hidden_dim),
-            })
-            for i in range(num_edge_types)
-        ])
+        # Embedding layer for categorical features
+        self.embedding = VesselEmbedding(
+            num_flags=num_flags,
+            num_classes=num_vessel_classes,
+            embed_dim=embed_dim,
+            continuous_dim=continuous_dim,
+            dropout=dropout,
+        )
 
-        # Temporal GAT layers
-        if use_temporal:
-            self.temporal_gat = nn.ModuleList([
-                nn.ModuleDict({
-                    "attention": GATLayer(
-                        input_dim if i == 0 else hidden_dim,
-                        hidden_dim, num_heads, dropout,
-                    ),
-                    "norm": nn.LayerNorm(hidden_dim),
-                })
-                for i in range(num_edge_types)
-            ])
+        # Spatial GAT encoder
+        self.spatial_encoder = SpatialGATEncoder(
+            in_dim=continuous_dim,
+            hidden_dim=hidden_dim,
+            out_dim=hidden_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            edge_types=num_edge_types,
+        )
 
+        # Temporal encoder
+        self.temporal_encoder = TemporalEncoder(
+            input_dim=hidden_dim,
+            hidden_dim=hidden_dim,
+        )
+
+        # Classification head
         self.classifier = nn.Sequential(
-            nn.Linear(hidden_dim, output_dim),
+            nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(output_dim, 1),
-            nn.Sigmoid(),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout * 0.5),
+            nn.Linear(hidden_dim // 2, NUM_CLASSES),
         )
 
+        self._init_weights()
+
+        total_params = sum(p.numel() for p in self.parameters())
         logger.info(
-            "ST-GAT initialized: input=%d, hidden=%d, heads=%d",
-            input_dim, hidden_dim, num_heads,
+            "ST-GAT initialized: continuous_dim=%d, hidden=%d, heads=%d, "
+            "edge_types=%d, label_smoothing=%.2f, params=%,d",
+            continuous_dim, hidden_dim, num_heads, num_edge_types,
+            label_smoothing, total_params,
         )
+
+    def _init_weights(self) -> None:
+        """Initialize weights with Xavier for linear layers."""
+        for module in self.modules():
+            if isinstance(module, nn.Linear) and module.weight.requires_grad:
+                nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
 
     def forward(
         self,
-        x: torch.Tensor,
+        x_cont: torch.Tensor,
         edge_index: torch.Tensor,
         edge_type: torch.Tensor,
-        temporal_edge_index: Optional[torch.Tensor] = None,
+        flag_idx: Optional[torch.Tensor] = None,
+        class_idx: Optional[torch.Tensor] = None,
         edge_attr: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """Forward pass.
+        """Forward pass for single snapshot.
 
         Args:
-            x: Node features [num_nodes, input_dim].
-            edge_index: Spatial edges [2, num_edges].
-            edge_type: Edge type per edge [num_edges].
-            temporal_edge_index: Temporal edges [2, num_temporal_edges].
-            edge_attr: Edge attributes [num_edges, dim].
+            x_cont: Continuous node features [N, continuous_dim].
+            edge_index: Edge indices [2, E].
+            edge_type: Edge type per edge [E].
+            flag_idx: Vessel flag embedding indices [N].
+            class_idx: Vessel class embedding indices [N].
+            edge_attr: Optional edge attributes [E, d].
 
         Returns:
-            Binary predictions [num_nodes, 1].
+            Class logits [N, 4].
         """
-        x_spatial = self._apply_attention(x, edge_index, edge_type, edge_attr, self.spatial_gat)
+        # Embed categorical features
+        x = self.embedding(x_cont, flag_idx, class_idx)
 
-        if self.use_temporal and temporal_edge_index is not None:
-            x_temporal = self._apply_attention(x, temporal_edge_index, edge_type, edge_attr, self.temporal_gat)
-            x = x_spatial + x_temporal
-        else:
-            x = x_spatial
+        # Spatial encoding
+        h = self.spatial_encoder(x, edge_index, edge_type, edge_attr)
 
-        return self.classifier(x)
+        # Classification
+        return self.classifier(h)
 
-    @staticmethod
-    def _apply_attention(
-        x: torch.Tensor,
-        edge_index: torch.Tensor,
-        edge_type: torch.Tensor,
-        edge_attr: Optional[torch.Tensor],
-        layers: nn.ModuleList,
+    def forward_temporal(
+        self,
+        x_seq: torch.Tensor,
+        edge_indices: list[torch.Tensor],
+        edge_types: list[torch.Tensor],
+        flag_idx: Optional[torch.Tensor] = None,
+        class_idx: Optional[torch.Tensor] = None,
+        edge_attrs: Optional[list[Optional[torch.Tensor]]] = None,
     ) -> torch.Tensor:
-        """Apply edge-type-specific GAT layers."""
-        out = x
-        for layer in layers:
-            attn = layer["attention"]
-            norm = layer["norm"]
-            out = norm(attn(out, edge_index, edge_attr))
-        return out
+        """Forward pass over temporal sequence of snapshots.
+
+        Args:
+            x_seq: Node features over time [N, T, continuous_dim].
+            edge_indices: List of edge_index tensors, one per timestep.
+            edge_types: List of edge_type tensors, one per timestep.
+            flag_idx: Vessel flag indices [N].
+            class_idx: Vessel class indices [N].
+            edge_attrs: Optional list of edge attribute tensors.
+
+        Returns:
+            Class logits [N, 4].
+        """
+        T = x_seq.size(1)
+        spatial_outs = []
+
+        for t in range(T):
+            h = self.embedding(x_seq[:, t, :], flag_idx, class_idx)
+            e_attr = edge_attrs[t] if edge_attrs else None
+            h = self.spatial_encoder(h, edge_indices[t], edge_types[t], e_attr)
+            spatial_outs.append(h)
+
+        # Stack and run through temporal encoder
+        spatial_seq = torch.stack(spatial_outs, dim=1)
+        h_final, _ = self.temporal_encoder(spatial_seq)
+
+        return self.classifier(h_final)
+
+    def compute_loss(
+        self,
+        logits: torch.Tensor,
+        labels: torch.Tensor,
+        class_weights: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """Compute weighted cross-entropy loss with optional label smoothing.
+
+        Args:
+            logits: Model output [N, 4].
+            labels: Ground truth labels [N].
+            class_weights: Optional class weight tensor [4].
+
+        Returns:
+            Scalar loss.
+        """
+        loss_fn = nn.CrossEntropyLoss(
+            weight=class_weights,
+            label_smoothing=self.label_smoothing,
+        )
+        return loss_fn(logits, labels)
 
 
 class STGATClassifier(nn.Module):
-    """Simple MLP classifier for vessel-level IUU prediction.
+    """MLP baseline classifier for vessel-level IUU prediction (no graph).
 
     Args:
         input_dim: Feature dimension.
-        hidden_dim: Hidden layer dimension.
-        output_dim: Output dimension (1 for binary).
+        hidden_dim: Hidden dimension.
+        output_dim: Output dimension (default 4 for 4-class).
+        dropout: Dropout rate.
     """
 
     def __init__(
         self,
-        input_dim: int = 8,
-        hidden_dim: int = 64,
-        output_dim: int = 1,
+        input_dim: int = 40,
+        hidden_dim: int = 128,
+        output_dim: int = NUM_CLASSES,
+        dropout: float = 0.3,
     ) -> None:
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout * 0.5),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout * 0.3),
         )
-        self.classifier = nn.Linear(hidden_dim, output_dim)
-        logger.info("STGATClassifier: input=%d, hidden=%d", input_dim, hidden_dim)
+        self.classifier = nn.Linear(hidden_dim // 2, output_dim)
+        logger.info("STGATClassifier: input=%d, hidden=%d, output=%d", input_dim, hidden_dim, output_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
@@ -252,6 +478,17 @@ class STGATClassifier(nn.Module):
             x: Input features [batch, input_dim].
 
         Returns:
-            Predictions [batch, output_dim].
+            Class logits [batch, output_dim].
         """
         return self.classifier(self.encoder(x))
+
+
+def et_edge_attr(
+    edge_attr: Optional[torch.Tensor],
+    mask: torch.Tensor,
+) -> Optional[torch.Tensor]:
+    """Extract edge attributes for a specific edge type."""
+    if edge_attr is None or edge_attr.numel() == 0:
+        return None
+    filtered = edge_attr[mask]
+    return filtered if filtered.numel() > 0 else None

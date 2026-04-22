@@ -115,10 +115,14 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
                 "reg_vessel_class", "vessel_flag", "is_domestic"]
     registry = df.groupby("mmsi")[reg_cols].first()
 
-    # Grid-level context features (all data — location properties, not vessel behavior)
-    context = df.groupby("mmsi").agg(
+    # Grid-level context features: location properties (all data) + behavioral (train-only)
+    # mean_sar_detections and mean_effort_hours are grid-cell context → all data
+    # in_highseas_ratio is vessel behavior → training period only (prevents leakage)
+    context_all = df.groupby("mmsi").agg(
         mean_sar_detections=("sar_total_detections", "mean"),
         mean_effort_hours=("effort_hours_in_cell", "mean"),
+    )
+    context_train = df_train.groupby("mmsi").agg(
         in_highseas_ratio=("in_highseas", "mean"),
     )
 
@@ -129,7 +133,7 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
     ).rename("vessel_iuu_label")
 
     # Merge all — LEFT JOIN preserves ALL vessels, NaN for test-only
-    for agg_df in [spatial, temporal, risk, registry, context]:
+    for agg_df in [spatial, temporal, risk, registry, context_all, context_train]:
         # Avoid column collisions
         overlap = [c for c in agg_df.columns if c in node_df.columns]
         if overlap:
@@ -183,24 +187,38 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_encounter_edges(df: pd.DataFrame) -> pd.DataFrame:
-    """Extract vessel-to-vessel encounter edges.
+    """Extract vessel-to-vessel encounter edges with attributes.
 
     Uses encounter events where both vessels have known MMSIs.
+    Includes edge attributes: duration and median distance.
 
     Args:
         df: Labeled events DataFrame.
 
     Returns:
-        DataFrame with columns [mmsi_1, mmsi_2, timestamp, edge_type].
+        DataFrame with columns [mmsi_1, mmsi_2, timestamp, edge_type,
+        edge_duration_hours, edge_distance_km].
     """
     logger.info("--- Building Encounter Edges ---")
 
     encounters = df[df["event_type"] == "encounter"].copy()
     encounters = encounters[encounters["mmsi_2"].notna() & (encounters["mmsi_2"] != "")]
 
-    edges = encounters[["mmsi", "mmsi_2", "start_time", "lat", "lon"]].copy()
-    edges.columns = ["mmsi_1", "mmsi_2", "timestamp", "lat", "lon"]
+    edge_cols = ["mmsi", "mmsi_2", "start_time", "lat", "lon"]
+    available = [c for c in edge_cols if c in encounters.columns]
+    edges = encounters[available].copy()
+    edges.columns = ["mmsi_1", "mmsi_2", "timestamp", "lat", "lon"][:len(available)]
+    # Ensure consistent columns
+    for c in ["mmsi_1", "mmsi_2", "timestamp"]:
+        if c not in edges.columns:
+            edges[c] = ""
     edges["edge_type"] = "encounter"
+
+    # Edge attributes: duration and distance
+    if "duration_hours" in encounters.columns:
+        edges["edge_duration_hours"] = encounters["duration_hours"].values
+    if "encounter_median_distance_km" in encounters.columns:
+        edges["edge_distance_km"] = encounters["encounter_median_distance_km"].values
 
     # Remove self-loops
     edges = edges[edges["mmsi_1"] != edges["mmsi_2"]]
@@ -210,43 +228,63 @@ def build_encounter_edges(df: pd.DataFrame) -> pd.DataFrame:
 
     logger.info(f"  Unique encounter edges: {len(edges):,}")
     logger.info(f"  Unique vessel pairs: {edges.groupby(['mmsi_1','mmsi_2']).ngroups:,}")
+    if "edge_duration_hours" in edges.columns:
+        logger.info(f"  Duration stats: mean={edges['edge_duration_hours'].mean():.1f}h, "
+                     f"median={edges['edge_duration_hours'].median():.1f}h")
 
     return edges
 
 
-def build_colocation_edges(df: pd.DataFrame) -> pd.DataFrame:
-    """Build co-location edges — vessels in same grid cell on same day.
+def build_colocation_edges(df: pd.DataFrame, max_vessels_per_cell: int = 15, distance_km: float = 5.0) -> pd.DataFrame:
+    """Build co-location edges — vessels within distance threshold in same grid cell on same day.
 
-    Unlike the previous version, this now preserves the date for each edge
-    so that weekly snapshots can scope co-location edges temporally.
+    Replaces the previous arbitrary cap (10 per vessel) with a distance-based filter.
+    Within each (date, grid_cell) group, only connects vessels that are actually close
+    (within distance_km), keeping at most max_vessels_per_cell nearest neighbors.
 
     Args:
         df: Labeled events DataFrame.
+        max_vessels_per_cell: Maximum vessels to connect per cell per day.
+        distance_km: Maximum inter-vessel distance in km for co-location edge.
 
     Returns:
-        DataFrame with columns [mmsi_1, mmsi_2, event_date, edge_type].
+        DataFrame with columns [mmsi_1, mmsi_2, event_date, edge_type, edge_distance_km].
     """
-    logger.info("--- Building Co-location Edges ---")
+    logger.info(f"--- Building Co-location Edges (distance<{distance_km}km, max_per_cell={max_vessels_per_cell}) ---")
 
     df["event_date"] = pd.to_datetime(df["start_time"]).dt.date
 
-    # Group by (date, grid_cell) and find vessel pairs
-    grouped = df.groupby(["event_date", "grid_lat", "grid_lon"])["mmsi"].unique()
+    # Get representative position per vessel per (date, grid_cell)
+    vessel_pos = df.groupby(["event_date", "grid_lat", "grid_lon", "mmsi"]).agg(
+        lat=("lat", "mean"),
+        lon=("lon", "mean"),
+    ).reset_index()
 
     edge_list = []
-    for (date, _, _), vessels in grouped.items():
-        if len(vessels) < 2:
+    for (date, _, _), cell_df in vessel_pos.groupby(["event_date", "grid_lat", "grid_lon"]):
+        if len(cell_df) < 2:
             continue
-        # Create all pairs (undirected)
-        for i in range(len(vessels)):
-            for j in range(i + 1, min(i + 10, len(vessels))):  # cap at 10 per vessel
-                edge_list.append((vessels[i], vessels[j], date))
+        mmsis = cell_df["mmsi"].values
+        lats = cell_df["lat"].values
+        lons = cell_df["lon"].values
+
+        n = len(mmsis)
+        # Precompute pairwise distances (haversine approx: 1 degree ≈ 111km)
+        dist_threshold_deg = distance_km / 111.0
+        for i in range(min(n, max_vessels_per_cell)):
+            for j in range(i + 1, n):
+                dlat = lats[j] - lats[i]
+                dlon = lons[j] - lons[i]
+                approx_dist_deg = np.sqrt(dlat**2 + dlon**2)
+                if approx_dist_deg <= dist_threshold_deg:
+                    dist_km = approx_dist_deg * 111.0
+                    edge_list.append((mmsis[i], mmsis[j], date, dist_km))
 
     if not edge_list:
         logger.warning("  No co-location edges found")
-        return pd.DataFrame(columns=["mmsi_1", "mmsi_2", "event_date", "edge_type"])
+        return pd.DataFrame(columns=["mmsi_1", "mmsi_2", "event_date", "edge_type", "edge_distance_km"])
 
-    edges = pd.DataFrame(edge_list, columns=["mmsi_1", "mmsi_2", "event_date"])
+    edges = pd.DataFrame(edge_list, columns=["mmsi_1", "mmsi_2", "event_date", "edge_distance_km"])
     edges["edge_type"] = "colocation"
 
     # Deduplicate (same pair, same date)
@@ -254,6 +292,7 @@ def build_colocation_edges(df: pd.DataFrame) -> pd.DataFrame:
 
     logger.info(f"  Unique co-location edge-date pairs: {len(edges):,}")
     logger.info(f"  Unique vessel pairs: {edges.groupby(['mmsi_1','mmsi_2']).ngroups:,}")
+    logger.info(f"  Mean distance: {edges['edge_distance_km'].mean():.2f} km")
 
     return edges
 
@@ -314,8 +353,14 @@ def build_weekly_snapshots(
     logger.info(f"  Total weeks: {len(weeks)}")
 
     # Pre-filter encounter edges by week (vectorized groupby)
-    enc_by_week = enc.groupby("year_week")[["mmsi_1", "mmsi_2"]].apply(
-        lambda g: list(zip(g["mmsi_1"], g["mmsi_2"]))
+    # Include edge attributes: duration_hours and distance_km
+    enc_edge_cols = ["mmsi_1", "mmsi_2"]
+    if "edge_duration_hours" in enc.columns:
+        enc_edge_cols.append("edge_duration_hours")
+    if "edge_distance_km" in enc.columns:
+        enc_edge_cols.append("edge_distance_km")
+    enc_by_week = enc.groupby("year_week")[enc_edge_cols].apply(
+        lambda g: list(g.itertuples(index=False, name=None))
     ).to_dict()
 
     # Pre-compute year_week for co-location edges using event_date
@@ -324,9 +369,14 @@ def build_weekly_snapshots(
     coloc_iso = coloc["event_date_dt"].dt.isocalendar()
     coloc["year_week"] = coloc["event_date_dt"].dt.year.astype(str) + "_W" + coloc_iso["week"].astype(str).str.zfill(2)
 
+    # Co-location edges with distance attribute
+    coloc_edge_cols = ["mmsi_1", "mmsi_2"]
+    if "edge_distance_km" in coloc.columns:
+        coloc_edge_cols.append("edge_distance_km")
+
     # Pre-index co-location by week for temporal scoping
-    coloc_by_week = coloc.groupby("year_week")[["mmsi_1", "mmsi_2"]].apply(
-        lambda g: list(zip(g["mmsi_1"], g["mmsi_2"]))
+    coloc_by_week = coloc.groupby("year_week")[coloc_edge_cols].apply(
+        lambda g: list(g.itertuples(index=False, name=None))
     ).to_dict()
     logger.info(f"  Co-location indexed for {len(coloc_by_week)} weeks")
 
@@ -347,27 +397,37 @@ def build_weekly_snapshots(
             skipped += 1
             continue
 
-        src, dst, etypes = [], [], []
+        src, dst, etypes, edge_durations, edge_distances = [], [], [], [], []
 
         # Resolve active vessels that are in our node feature set
         snap_vessels = sorted(active.intersection(mmsi_to_idx.keys()))
 
-        # Encounter edges (pre-grouped)
-        for m1, m2 in enc_by_week.get(week, []):
+        # Encounter edges (pre-grouped, with attributes)
+        for edge_data in enc_by_week.get(week, []):
+            m1, m2 = edge_data[0], edge_data[1]
             if m1 in local_idx and m2 in local_idx:
                 src.append(local_idx[m1])
                 dst.append(local_idx[m2])
                 etypes.append("encounter")
+                # Extract optional attributes
+                dur = edge_data[2] if len(edge_data) > 2 and edge_data[2] is not None else 0.0
+                dist = edge_data[3] if len(edge_data) > 3 and edge_data[3] is not None else 0.0
+                edge_durations.append(dur)
+                edge_distances.append(dist)
 
         # Co-location edges (temporally scoped — only edges from this week)
         seen = set()
-        for m1, m2 in coloc_by_week.get(week, []):
+        for edge_data in coloc_by_week.get(week, []):
+            m1, m2 = edge_data[0], edge_data[1]
             if m1 in local_idx and m2 in local_idx:
                 pair = (min(m1, m2), max(m1, m2))
                 if pair not in seen:
                     src.append(local_idx[m1])
                     dst.append(local_idx[m2])
                     etypes.append("colocation")
+                    dist = edge_data[2] if len(edge_data) > 2 and edge_data[2] is not None else 0.0
+                    edge_durations.append(0.0)  # co-location has no duration
+                    edge_distances.append(dist)
                     seen.add(pair)
 
         # Labels: max IUU label across events in this week
@@ -386,6 +446,8 @@ def build_weekly_snapshots(
             "dst": dst,
             "edge_types": etypes,
             "labels": snap_labels,
+            "edge_durations": edge_durations,
+            "edge_distances": edge_distances,
         }
 
     logger.info(f"  Built {len(snapshots)} snapshots (skipped {skipped} with <{MIN_VESSELS_PER_SNAPSHOT} vessels)")
@@ -416,14 +478,15 @@ def run_graph_all() -> dict:
     # Step 1: Node features
     node_df, feature_cols = build_vessel_node_features(df)
 
-    # Step 1b: Normalize numeric features (StandardScaler fit on training vessels only)
-    from sklearn.preprocessing import StandardScaler
+    # Step 1b: Normalize numeric features (RobustScaler fit on training vessels only)
+    # RobustScaler uses median/IQR — resistant to maritime data outliers
+    from sklearn.preprocessing import RobustScaler
     import pickle as pkl
 
     numeric_cols = node_df.select_dtypes(include=[np.number]).columns.tolist()
     # Exclude the label and indicator features from normalization
     exclude_from_norm = {"vessel_iuu_label", "has_behavioral_data", "has_fishing_data",
-                         "has_port_data", "has_registry", "is_domestic"}
+                         "has_port_data", "has_registry", "is_domestic", "is_foc_flag"}
     normalize_cols = [c for c in numeric_cols if c not in exclude_from_norm]
     logger.info(f"  Normalizing {len(normalize_cols)} numeric features...")
     logger.info(f"  Excluded from normalization (binary/indicator): {sorted(exclude_from_norm & set(numeric_cols))}")
@@ -439,10 +502,10 @@ def run_graph_all() -> dict:
 
     # Fit scaler on training-period vessels only, apply to all
     train_mask = node_df["has_behavioral_data"] == 1
-    scaler = StandardScaler()
+    scaler = RobustScaler()
     scaler.fit(node_df.loc[train_mask, normalize_cols])
     node_df[normalize_cols] = scaler.transform(node_df[normalize_cols])
-    logger.info(f"  Scaler fit on {train_mask.sum():,} training vessels, applied to all {len(node_df):,}")
+    logger.info(f"  RobustScaler fit on {train_mask.sum():,} training vessels, applied to all {len(node_df):,}")
 
     # Log scale stats
     logger.info(f"  After normalization — sample stats:")

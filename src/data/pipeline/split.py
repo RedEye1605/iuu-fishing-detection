@@ -9,10 +9,12 @@ contains vessels active that week with their edges and labels. Events from
 the same vessel can appear in multiple splits (expected — same vessel at
 different times), but no snapshot from a later period leaks into an earlier split.
 
-Split boundaries:
-  Train: 2020-W01 to 2023-W52  (~74% of events)
-  Val:   2024-W01 to 2024-W26  (~11% of events)
-  Test:  2024-W27 to 2025-W16  (~15% of events)
+Split boundaries (with 2-week gaps to prevent temporal autocorrelation leakage):
+  Train: 2020-W01 to 2023-W50
+  Gap:   2023-W51 to 2023-W52 (excluded)
+  Val:   2024-W01 to 2024-W24
+  Gap:   2024-W25 to 2024-W26 (excluded)
+  Test:  2024-W27 to 2025-W16
 
 Why temporal (not random) split:
   - Prevents look-ahead bias (model can't use future patterns)
@@ -50,9 +52,13 @@ INPUT = PROCESSED_DIR
 OUTPUT = PROCESSED_DIR / "split"
 
 # ===== SPLIT BOUNDARIES (ISO week format: YYYY-Www) =====
-TRAIN_END = "2023_W52"   # Train: up to end of 2023
-VAL_END = "2024_W26"     # Val: first half of 2024
-# Test: everything after VAL_END
+# 2-week gap between splits to prevent temporal autocorrelation leakage
+# (adjacent weeks in maritime data are highly correlated — Rossi et al., 2020)
+TRAIN_END = "2023_W50"   # Train: up to 2023-W50
+GAP1_END = "2023_W52"    # Gap: 2023-W51 to 2023-W52 (excluded)
+VAL_END = "2024_W24"     # Val: 2024-W01 to 2024-W24
+GAP2_END = "2024_W26"    # Gap: 2024-W25 to 2024-W26 (excluded)
+# Test: 2024-W27 onwards
 
 
 def _week_sort_key(week_str: str) -> tuple:
@@ -75,20 +81,29 @@ def assign_snapshot_split(snapshots: dict) -> dict[str, list[str]]:
     train_weeks = []
     val_weeks = []
     test_weeks = []
+    gap_weeks = []
 
     train_key = _week_sort_key(TRAIN_END)
+    gap1_key = _week_sort_key(GAP1_END)
     val_key = _week_sort_key(VAL_END)
+    gap2_key = _week_sort_key(GAP2_END)
 
     for week in sorted(snapshots.keys()):
         week_key = _week_sort_key(week)
         if week_key <= train_key:
             train_weeks.append(week)
+        elif week_key <= gap1_key:
+            gap_weeks.append(week)
         elif week_key <= val_key:
             val_weeks.append(week)
+        elif week_key <= gap2_key:
+            gap_weeks.append(week)
         else:
             test_weeks.append(week)
 
-    logger.info(f"  Train: {len(train_weeks)} snapshots ({train_weeks[0]} to {train_weeks[-1]})")
+    logger.info(f"  Train: {len(train_weeks)} snapshots ({train_weeks[0]} to {train_weeks[-1] if train_weeks else 'N/A'})")
+    if gap_weeks:
+        logger.info(f"  Gap:   {len(gap_weeks)} snapshots EXCLUDED ({gap_weeks[0]} to {gap_weeks[-1]})")
     logger.info(f"  Val:   {len(val_weeks)} snapshots ({val_weeks[0]} to {val_weeks[-1] if val_weeks else 'N/A'})")
     logger.info(f"  Test:  {len(test_weeks)} snapshots ({test_weeks[0] if test_weeks else 'N/A'} to {test_weeks[-1] if test_weeks else 'N/A'})")
 
@@ -254,14 +269,19 @@ def run_split_all() -> dict:
         json.dump(stats, f, indent=2)
     logger.info(f"  ✅ Split statistics → {stats_path}")
 
-    # Step 4: Validate — check no temporal leakage
+    # Step 4: Validate — check no temporal leakage and gap exists
     train_weeks = split_assignment["train"]
     val_weeks = split_assignment["val"]
     test_weeks = split_assignment["test"]
 
     assert _week_sort_key(train_weeks[-1]) < _week_sort_key(val_weeks[0]), "Temporal leakage: train/val overlap!"
     assert _week_sort_key(val_weeks[-1]) < _week_sort_key(test_weeks[0]), "Temporal leakage: val/test overlap!"
-    logger.info("  ✅ No temporal leakage between splits")
+    # Verify gap: at least 1 week between train end and val start
+    train_end_key = _week_sort_key(train_weeks[-1])
+    val_start_key = _week_sort_key(val_weeks[0])
+    assert (val_start_key[0] - train_end_key[0]) * 52 + (val_start_key[1] - train_end_key[1]) >= 2, \
+        "Gap too small between train and val!"
+    logger.info("  ✅ No temporal leakage, 2-week gap verified between splits")
 
     # Step 5: Verify event-level counts match
     total_events = sum(s["n_events"] for s in stats.values())

@@ -229,15 +229,21 @@ def build_pyg_snapshots(
                     dtype=np.int64,
                 )
                 edge_index = np.stack([src, dst], axis=0)
+                # Edge attributes: [duration_hours, distance_km]
+                edge_durations = np.array(snap.get("edge_durations", [0]*len(src)), dtype=np.float32)
+                edge_distances = np.array(snap.get("edge_distances", [0]*len(src)), dtype=np.float32)
+                edge_attr = np.stack([edge_durations, edge_distances], axis=-1)
             else:
                 edge_index = np.zeros((2, 0), dtype=np.int64)
                 edge_types = np.zeros(0, dtype=np.int64)
+                edge_attr = np.zeros((0, 2), dtype=np.float32)
 
             all_data[week] = {
                 "vessel_indices": vessel_indices,
                 "edge_index": edge_index,
                 "edge_type": edge_types,
                 "labels": labels,
+                "edge_attr": edge_attr,
             }
             snapshot_order.append(week)
 

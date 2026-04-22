@@ -13,18 +13,23 @@ All output files are in `data/processed/`. Schemas verified from actual parquet 
 
 ## Final Output
 
-### `gfw_events_labeled.parquet` (512,247 rows × 124 cols) ← FINAL
+### `gfw_events_labeled.parquet` (~512K rows × 130 cols) ← FINAL
 The master labeled events table used for ML training.
 
-All 111 columns from `gfw_events_full.parquet` plus:
+All columns from `gfw_events_full.parquet` plus:
 
-**IUU Indicators (11 booleans):** `ind_fishing_in_mpa` (bool), `ind_unauthorized_foreign` (bool), `ind_high_seas_fishing` (bool), `ind_encounter_at_sea` (bool), `ind_loitering_anomaly` (bool), `ind_unregistered_vessel` (bool), `ind_nighttime_foreign` (bool), `ind_high_encounter_rate` (bool), `ind_high_loitering_rate` (bool), `ind_far_offshore` (bool), `ind_rapid_port_cycle` (bool)
+**IUU Indicators (12 booleans):**
+- Tier 1: `ind_fishing_in_mpa`, `ind_unauthorized_foreign`, `ind_high_seas_fishing`, `ind_foreign_no_auth_data`
+- Tier 2: `ind_encounter_at_sea`, `ind_loitering_anomaly`, `ind_unregistered_vessel`, `ind_nighttime_foreign`, `ind_foc_vessel`, `ind_ais_gap_proxy`
+- Tier 3: `ind_high_encounter_rate`, `ind_high_loitering_rate`, `ind_far_offshore`, `ind_rapid_port_cycle`
 
 **IUU Score & Label (2):** `iuu_score` (f64, range [0, 1]), `iuu_label` (str: normal|suspicious|probable_iuu|hard_iuu)
 
+**FoC & Cyclical (5):** `is_foc_flag` (bool), `hour_sin` (f32), `hour_cos` (f32), `month_sin` (f32), `month_cos` (f32)
+
 ---
 
-### `gfw_events_full.parquet` (512,247 rows × 111 cols)
+### `gfw_events_full.parquet` (~512K rows × 111 cols)
 The master enriched events table used for modeling.
 
 **Core (12):** `event_id` (str), `event_type` (str), `start_time` (ts UTC), `end_time` (ts UTC), `lat` (f64), `lon` (f64), `bbox_minlon` (f64), `bbox_minlat` (f64), `bbox_maxlon` (f64), `bbox_maxlat` (f64), `mmsi` (str), `duration_hours` (f64)
@@ -39,11 +44,11 @@ The master enriched events table used for modeling.
 
 **Movement (3):** `total_distance_km` (f64), `avg_speed_knots` (f64), `implied_speed_knots` (f64)
 
-**Port visit specific (6):** `port_id` (str), `port_name` (str), `port_lat` (f64), `port_lon` (f64), `port_visit_duration_hours` (f64), `port_visit_confidence` (str), `port_country_flag` (str), `at_dock` (bool), `next_port` (str)
+**Port visit specific (9):** `port_id` (str), `port_name` (str), `port_lat` (f64), `port_lon` (f64), `port_visit_duration_hours` (f64), `port_visit_confidence` (str), `port_country_flag` (str), `at_dock` (bool), `next_port` (str)
 
-**Encounter specific (6):** `mmsi_2` (str), `vessel_name_2` (str), `vessel_type_2` (str), `vessel_flag_2` (str), `encounter_type` (str), `encounter_median_speed_knots` (f64), `encounter_median_distance_km` (f64), `encounter_potential_risk` (bool)
+**Encounter specific (8):** `mmsi_2` (str), `vessel_name_2` (str), `vessel_type_2` (str), `vessel_flag_2` (str), `encounter_type` (str), `encounter_median_speed_knots` (f64), `encounter_median_distance_km` (f64), `encounter_potential_risk` (bool)
 
-**Loitering specific (3):** `loitering_total_distance_km` (f64), `loitering_total_hours` (f64), `loitering_avg_speed_knots` (f64), `loitering_avg_distance_shore_km` (f64)
+**Loitering specific (4):** `loitering_total_distance_km` (f64), `loitering_total_hours` (f64), `loitering_avg_speed_knots` (f64), `loitering_avg_distance_shore_km` (f64)
 
 **MPA (1):** `in_mpa_notake` (bool)
 
@@ -55,7 +60,11 @@ The master enriched events table used for modeling.
 
 **Registry (9):** `reg_vessel_class` (str), `reg_length_m` (f64), `reg_engine_power_kw` (f64), `reg_tonnage_gt` (f64), `reg_self_reported_fishing` (bool), `reg_flag_ais` (str), `is_fishing_vessel` (bool), `size_category` (str), `tonnage_per_length` (f64)
 
+**FoC (1):** `is_foc_flag` (bool) — ITF-listed Flag-of-Convenience indicator
+
 **Temporal derived (2):** `duration_category` (str)
+
+**Cyclical encoding (4):** `hour_sin` (f32), `hour_cos` (f32), `month_sin` (f32), `month_cos` (f32)
 
 **Spatial (5):** `grid_lat` (f64), `grid_lon` (f64), `nearest_port_name` (str), `nearest_port_dist_km` (f64), `sea_zone` (str)
 
@@ -67,14 +76,14 @@ The master enriched events table used for modeling.
 
 ## Intermediate Files
 
-### `gfw_events_flat.parquet` (512,272 rows × 54 cols)
+### `gfw_events_flat.parquet` (~512K rows × 54 cols)
 Raw flattened GFW events before cleaning. Same core schema as above but without Phase 2/3 derived columns.
 
-### `gfw_events_clean.parquet` (512,247 rows × 66 cols)
-After dedup + cleaning. Adds temporal features, flag standardization, speed flags, domestic/foreign flags.
+### `gfw_events_clean.parquet` (~512K rows × 66 cols)
+After dedup + cleaning. Adds temporal features, cyclical encoding, flag standardization, FoC indicator, speed flags, domestic/foreign flags.
 
-### `vessel_behavioral_features.parquet` (14,857 rows × 28 cols)
-Per-vessel aggregated features. Key: `mmsi` (string, unique).
+### `vessel_behavioral_features.parquet` (~14.8K rows × 28 cols)
+Per-vessel aggregated features (training period only). Key: `mmsi` (string, unique).
 
 `mmsi` (str), `total_events` (i64), `first_seen` (ts UTC), `last_seen` (ts UTC), `vessel_flag` (str), `is_domestic` (bool), `tracking_span_days` (f64), `fishing_count` (i64), `encounter_count` (i64), `loitering_count` (i64), `port_visit_count` (i64), `avg_fishing_duration` (f64), `total_fishing_hours` (f64), `avg_fishing_distance` (f64), `fishing_lat_mean` (f64), `fishing_lon_mean` (f64), `avg_distance_shore` (f64), `max_distance_shore` (i64), `spatial_range_km` (f64), `unique_grid_cells` (i64), `avg_speed_knots` (f64), `speed_std` (f64), `encounters_with_foreign` (i64), `total_loitering_hours` (f64), `avg_port_duration` (f64), `encounter_rate` (f64), `loitering_rate` (f64), `fishing_ratio` (f64)
 
@@ -95,21 +104,12 @@ Same schema as fishing_effort_clean, with `detections` (i64) instead of `fishing
 ### `ports.parquet` (30 rows × 3 cols)
 `name` (str), `lat` (f64), `lon` (f64)
 
-### `fishing_effort_flat.parquet` (890,411 rows × 13 cols)
-Pre-clean. `mmsi` (str), `date` (str), `lat` (f64), `lon` (f64), `fishing_hours` (f64), `flag` (str), `geartype` (str), `vessel_type` (str), `vessel_id` (str), `vessel_name` (str), `callsign` (str), `entry_timestamp` (str), `exit_timestamp` (str)
-
-### `sar_presence_flat.parquet` (1,242,915 rows × 13 cols)
-Pre-clean. Same as fishing_effort_flat with `detections` (i64) instead of `fishing_hours`.
-
-### `zenodo_effort_flat.parquet` (707,118 rows × 10 cols)
-Pre-clean. `date` (str), `year` (i64), `month` (i64), `cell_ll_lat` (f64), `cell_ll_lon` (f64), `flag` (str), `geartype` (str), `hours` (f64), `fishing_hours` (f64), `mmsi_present` (i64)
-
 ---
 
 ## Graph Output Files (Phase 5)
 
-### `vessel_node_features.parquet` (14,857 rows × 42 cols)
-Per-vessel feature matrix for graph neural network. Features are StandardScaler-normalized. Key: `mmsi` (string, unique).
+### `vessel_node_features.parquet` (~14.8K rows × 42 cols)
+Per-vessel feature matrix for graph neural network. Features are **RobustScaler**-normalized (fit on training vessels only). Key: `mmsi` (string, unique).
 
 **Spatial (4):** `mean_lat`, `mean_lon`, `std_lat`, `std_lon`
 
@@ -125,34 +125,42 @@ Per-vessel feature matrix for graph neural network. Features are StandardScaler-
 
 **Risk proxies (3):** `unauthorized_count`, `highseas_count`, `mpa_count`
 
-**Context (3):** `mean_sar_detections`, `mean_effort_hours`, `in_highseas_ratio`
+**Context (3):** `mean_sar_detections` (all data), `mean_effort_hours` (all data), `in_highseas_ratio` (training period only)
 
 **Label (1):** `vessel_iuu_label` (0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu) — NOT normalized
 
+**Data quality indicators (4):** `has_behavioral_data`, `has_fishing_data`, `has_port_data`, `is_foc_flag`
+
 **Key (1):** `mmsi`
 
-Total: 42 columns (35 numeric features normalized + 1 label + 1 key + 5 identity)
+Total: 42 columns (35 numeric features normalized + 1 label + 2 key/identity + 4 binary indicators)
 
 ### `feature_scaler.pkl`
-Pickled dict with `scaler` (StandardScaler) and `columns` (list of normalized column names). Use for inference-time normalization.
+Pickled dict with `scaler` (RobustScaler) and `columns` (list of normalized column names). Use for inference-time normalization.
 
-### `encounter_edges.parquet` (46,239 rows)
-Direct vessel-to-vessel encounter edges from transshipment events.
+### `encounter_edges.parquet` (~46K rows)
+Direct vessel-to-vessel encounter edges with attributes.
 
-`mmsi_1` (str), `mmsi_2` (str), `timestamp` (ts UTC), plus encounter metadata columns
+`mmsi_1` (str), `mmsi_2` (str), `timestamp` (ts UTC), `edge_type` (str), `edge_duration_hours` (f64), `edge_distance_km` (f64)
 
-### `colocation_edges.parquet` (477,914 rows)
-Vessel pairs found in the same 0.1° grid cell on the same day. Temporally scoped — each edge has an `event_date`.
+### `colocation_edges.parquet` (~478K rows)
+Distance-filtered co-location edges (within 5km in same grid cell, max 15 vessels/cell).
 
-`mmsi_1` (str), `mmsi_2` (str), `event_date` (date), `edge_type` (str: "colocation")
+`mmsi_1` (str), `mmsi_2` (str), `event_date` (date), `edge_type` (str: "colocation"), `edge_distance_km` (f64)
 
-### `snapshot_metadata.parquet` (283 rows)
-Weekly graph snapshot statistics.
+### `snapshot_metadata.parquet` (274 rows)
+Weekly graph snapshot statistics (gap weeks excluded).
 
-`week_start` (ts), `num_vessels` (int), `num_encounter_edges` (int), `num_colocation_edges` (int), `total_edges` (int)
+`week` (str), `n_vessels` (int), `n_edges` (int), `n_encounter` (int), `n_colocation` (int)
 
 ### `graph_snapshots.pkl`
-Full serialized graph data (edge indices, node feature tensors, temporal mappings). Gitignored — reconstructible via `python scripts/run_pipeline.py --phase 5`.
+Full serialized graph data including edge attributes (duration, distance). Gitignored — reconstructible via `python scripts/run_pipeline.py --step graph`.
+
+Each snapshot dict contains:
+- `vessel_indices`, `src`, `dst`, `labels`, `n_vessels`, `n_edges`
+- `edge_types`: list of "encounter" / "colocation"
+- `edge_durations`: list of float (hours, 0 for co-location)
+- `edge_distances`: list of float (km)
 
 ---
 
@@ -163,28 +171,23 @@ Mapping of weekly snapshot identifiers to train/val/test sets.
 
 ```json
 {
-  "train": ["2018_W10", ..., "2023_W52"],   // 215 snapshots
-  "val":   ["2024_W01", ..., "2024_W26"],   // 26 snapshots
+  "train": ["2020_W01", ..., "2023_W50"],   // 208 snapshots
+  "val":   ["2024_W01", ..., "2024_W24"],   // 24 snapshots
   "test":  ["2024_W27", ..., "2025_W16"]    // 42 snapshots
 }
 ```
 
+**2-week gaps excluded** (2023-W51 to 2023-W52, 2024-W25 to 2024-W26).
+
 ### `split/split_stats.json`
 Per-split distribution statistics (events, vessels, edges, label/flag/event_type distributions).
 
-### `split/train/snapshot_data.pkl`, `split/val/...`, `split/test/...`
+### `split/{split}/snapshot_data.pkl`
 Per-split snapshot data with int64 numpy arrays:
 - `vessel_indices` — vessel node indices for each snapshot
 - `src`, `dst` — edge source/destination indices
 - `labels` — IUU label (0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu)
 - `n_vessels`, `n_edges`, `edge_types` — metadata
-
-**Split boundaries:**
-- Train: 2018-W10 → 2023-W52 (215 snapshots, 379K events, 74%)
-- Val: 2024-W01 → 2024-W26 (26 snapshots, 58K events, 11%)
-- Test: 2024-W27 → 2025-W16 (42 snapshots, 75K events, 15%)
-
-**No temporal leakage:** strict chronological ordering, no overlap.
 
 ---
 
@@ -193,35 +196,47 @@ Per-split snapshot data with int64 numpy arrays:
 All files in `data/processed/model/`. Direct consumption by PyG model.
 
 ### `node_features.npy`
-(14857, 39) float32 numpy array. All-numeric node feature matrix.
+(N, 40) float32 numpy array. All-numeric continuous node feature matrix.
 
-**NO NaN, NO INF, Normalized (mean≈0, std≈1)**
+**NO NaN, NO Inf, RobustScaler-normalized (median≈0, IQR≈1)**
 
 ### `node_labels.npy`
-(14857,) int64 numpy array. Vessel-level IUU labels (0=normal, 1=suspicious, 2=probable, 3=hard).
+(N,) int64 numpy array. Vessel-level IUU labels (0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu).
 
 ### `class_weights.npy`
-(4,) float32 array. Inverse-frequency weights: [1.61, 0.41, 1.57, 3.61].
+(4,) float32 array. Inverse-frequency weights computed from snapshot-level training distribution.
 
 ### `vessel_flag_embed.npy`
-(128, 8) float32 array. Xavier init for flag embedding lookup.
+(127, 8) float32 array. Xavier uniform initialization for flag embedding lookup.
 
 ### `vessel_class_embed.npy`
-(17, 8) float32 array. Xavier init for class embedding lookup.
+(17, 8) float32 array. Xavier uniform initialization for class embedding lookup.
 
 ### `feature_names.json`
-Ordered list of 39 feature names.
+Ordered list of continuous feature names.
 
 ### `encoders.pkl`
-LabelEncoder objects + frequency maps.
+LabelEncoder objects + frequency maps for flag and class.
 
 ### `mmsi_index.json`
 MMSI → global node index mapping.
 
-### `snapshots/{split}_snapshots.pkl`
-Consolidated snapshot data (not 1000+ npy files):
-- train: 215 snapshots (vessel_indices, edge_index, edge_type, labels)
-- val: 26 snapshots
-- test: 42 snapshots
+### `vessel_flag_indices.npy`
+(N,) int64 array. Flag embedding indices (separate from continuous features).
 
-Model config: in_channels=39, num_classes=4
+### `vessel_class_indices.npy`
+(N,) int64 array. Class embedding indices (separate from continuous features).
+
+### `snapshots/{split}_snapshots.pkl`
+Consolidated snapshot data per split:
+- `order`: ordered list of snapshot week IDs
+- `data`: dict of week → snapshot tensors
+
+Each snapshot contains:
+- `vessel_indices` (V,) int64 — global node indices
+- `edge_index` (2, E) int64 — source/destination
+- `edge_type` (E,) int64 — 0=encounter, 1=colocation
+- `edge_attr` (E, 2) float32 — [duration_hours, distance_km]
+- `labels` (V,) int64 — vessel IUU labels
+
+Model config: continuous_dim=40, num_flags=127, num_vessel_classes=17, embed_dim=8, hidden_dim=64, num_heads=4, num_edge_types=2, num_classes=4

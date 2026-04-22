@@ -7,6 +7,7 @@ Labels are based on indicators we can actually derive from available data.
 Tier 1 — Hard IUU (weight 1.0):
   - fishing_in_mpa: Fishing inside no-take MPA
   - unauthorized_foreign: Foreign vessel fishing without authorization in EEZ
+  - foreign_no_auth_data: Foreign vessel fishing with unknown/missing authorization
   - high_seas_fishing: Fishing outside any EEZ
 
 Tier 2 — Suspicious Activity (weight 0.6):
@@ -14,6 +15,8 @@ Tier 2 — Suspicious Activity (weight 0.6):
   - loitering_anomaly: Excessive loitering relative to vessel's own patterns
   - unregistered_vessel: No registry match for fishing vessel
   - nighttime_foreign: Foreign vessel fishing at night
+  - foc_vessel: Flag-of-Convenience vessel (Boerder et al., 2018)
+  - ais_gap_proxy: >24h gap between events suggests AIS disabling (Ford et al., 2018)
 
 Tier 3 — Behavioral Anomaly (weight 0.3):
   - high_encounter_rate: Vessel encounter rate > 75th percentile
@@ -122,6 +125,18 @@ def compute_tier1_indicators(df: pd.DataFrame) -> pd.DataFrame:
     n = df["ind_unauthorized_foreign"].sum()
     logger.info(f"  unauthorized_foreign: {n:,} events ({n/len(df)*100:.2f}%)")
 
+    # Foreign vessel with unknown/missing authorization data
+    # These vessels lack RFMO authorization records entirely — a weaker but broader signal
+    df["ind_foreign_no_auth_data"] = (
+        (df["event_type"] == "fishing")
+        & (df["is_foreign"] == True)
+        & (df["authorization_status"].isin(["unknown", ""]))
+        & (df["in_highseas"] == False)
+        & ~df["mmsi"].isin(idn_port_vessels)
+    ).astype(int)
+    n = df["ind_foreign_no_auth_data"].sum()
+    logger.info(f"  foreign_no_auth_data: {n:,} events ({n/len(df)*100:.2f}%)")
+
     # High seas fishing (outside EEZ jurisdiction)
     df["ind_high_seas_fishing"] = (
         (df["event_type"] == "fishing") & (df["in_highseas"] == True)
@@ -189,12 +204,49 @@ def compute_tier2_indicators(df: pd.DataFrame) -> pd.DataFrame:
     n = df["ind_nighttime_foreign"].sum()
     logger.info(f"  nighttime_foreign: {n:,} events ({n/len(df)*100:.2f}%)")
 
+    # Flag-of-Convenience vessel: ITF-listed FoC flags correlate with IUU (Boerder et al., 2018)
+    df["ind_foc_vessel"] = df.get("is_foc_flag", pd.Series(0, index=df.index)).astype(int)
+    n = df["ind_foc_vessel"].sum()
+    logger.info(f"  foc_vessel: {n:,} events ({n/len(df)*100:.2f}%)")
+
+    # Proxy AIS gap detection (Ford et al., 2018 — AIS disabling is strong IUU signal)
+    # Compute time gaps between consecutive events per vessel.
+    # Only meaningful for fishing vessels — non-fishing vessels have natural gaps.
+    # Use a stricter threshold: >72h gap between consecutive events for fishing vessels
+    # that also have low total event count (suggests sporadic AIS usage, not just port time).
+    AIS_GAP_THRESHOLD = 72.0
+    # Sort and compute gaps from all events (need full timeline)
+    df_sorted = df.sort_values(["mmsi", "start_time"])
+    fishing_events = df_sorted[df_sorted["event_type"] == "fishing"].copy()
+    if len(fishing_events) > 0:
+        fishing_events = fishing_events.sort_values(["mmsi", "start_time"])
+        fishing_events["prev_time"] = fishing_events.groupby("mmsi")["start_time"].shift(1)
+        fishing_events["gap_hours"] = (fishing_events["start_time"] - fishing_events["prev_time"]).dt.total_seconds() / 3600
+        # Focus on vessels with few total events (sporadic AIS) and large gaps
+        vessel_event_count = fishing_events.groupby("mmsi").size()
+        sporadic_vessels = set(vessel_event_count[vessel_event_count <= 10].index)
+        gap_mask = (
+            (fishing_events["gap_hours"] > AIS_GAP_THRESHOLD)
+            & (fishing_events["gap_hours"].notna())
+            & (fishing_events["mmsi"].isin(sporadic_vessels))
+        )
+        gap_vessels = set(fishing_events.loc[gap_mask, "mmsi"].unique())
+        logger.info(f"  Vessels with >{AIS_GAP_THRESHOLD}h fishing gaps (sporadic AIS): {len(gap_vessels):,}")
+    else:
+        gap_vessels = set()
+    df["ind_ais_gap_proxy"] = df["mmsi"].isin(gap_vessels).astype(int)
+    n = df["ind_ais_gap_proxy"].sum()
+    logger.info(f"  ais_gap_proxy: {n:,} events ({n/len(df)*100:.2f}%)")
+
     # Aggregate tier 2: count of indicators
     df["tier2_count"] = (
         df["ind_encounter_at_sea"]
         + df["ind_loitering_anomaly"]
         + df["ind_unregistered_vessel"]
         + df["ind_nighttime_foreign"]
+        + df["ind_foc_vessel"]
+        + df["ind_ais_gap_proxy"]
+        + df.get("ind_foreign_no_auth_data", pd.Series(0, index=df.index))
     )
     n = (df["tier2_count"] >= 1).sum()
     n2 = (df["tier2_count"] >= 2).sum()

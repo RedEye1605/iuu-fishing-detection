@@ -80,7 +80,17 @@ GFW_EVENTS_LABELED = "gfw_events_labeled.parquet"
 
 # ===== TEMPORAL SPLIT BOUNDARIES =====
 # Training period cutoff: all feature/label computation uses only data before this date
-# to prevent information leakage. Matches Phase 6 split (train ends 2023-W52).
+# to prevent information leakage. Matches Phase 6 split (train ends 2023-W50 + gap).
 TRAIN_CUTOFF = "2024-01-01"
 # Earliest valid event date (filter outliers from source data)
 DATA_START = "2020-01-01"
+
+# ===== FLAG-OF-CONVENIENCE (FoC) FLAGS =====
+# ITF-listed flags of convenience (Boerder et al., 2018 — FoC vessels ~3x more likely IUU)
+# These flags are registered in countries with minimal regulatory oversight,
+# making them attractive for vessels seeking to obscure ownership or avoid enforcement.
+FOC_FLAGS = {
+    "PAN", "LBR", "BZL", "MNG", "TTO", "BHS", "CYM", "MLT", "BMD",
+    "ANT", "MW", "STP", "KNA", "VUT", "MHL", "TLS", "GIB", "BOL",
+    "HKG", "SGP", "NAM", "CAM",
+}

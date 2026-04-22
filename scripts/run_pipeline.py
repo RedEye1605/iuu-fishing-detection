@@ -1,10 +1,8 @@
-"""Master pipeline runner — executes all Phase 1-3 steps in order.
+"""Master pipeline runner — executes all pipeline steps in order.
 
 Usage:
     python scripts/run_pipeline.py                # Run all
     python scripts/run_pipeline.py --phase 1      # Run only Phase 1
-    python scripts/run_pipeline.py --phase 2      # Run only Phase 2
-    python scripts/run_pipeline.py --phase 3      # Run only Phase 3
     python scripts/run_pipeline.py --step extract  # Run specific step
 """
 
@@ -20,10 +18,9 @@ logger = logging.getLogger(__name__)
 
 # Step registry: (step_id, module_path, function_name)
 STEPS = [
-    ("extract", "src.data.pipeline.extract", "run_extract_all"),
+    ("extract",  "src.data.pipeline.extract", "run_extract_all"),
     ("clean",   "src.data.pipeline.clean",   "run_clean_all"),
     ("features", "src.data.pipeline.features", "run_features_all"),
-    ("enrich",  "src.data.pipeline.enrich",   "run_enrich_all"),
     ("labels",  "src.data.pipeline.labels",   "run_label_all"),
     ("graph",   "src.data.pipeline.graph",    "run_graph_all"),
     ("split",   "src.data.pipeline.split",    "run_split_all"),
@@ -33,7 +30,7 @@ STEPS = [
 PHASE_MAP = {
     "1": ["extract"],
     "2": ["clean"],
-    "3": ["features", "enrich"],
+    "3": ["features"],
     "4": ["labels"],
     "5": ["graph"],
     "6": ["split"],
@@ -69,7 +66,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="IUU Fishing Detection Pipeline Runner")
     parser.add_argument("--phase", choices=["1","2","3","4","5","6","7"], help="Run only this phase")
-    parser.add_argument("--step", help="Run a specific step (extract|clean|features|enrich|labels|graph|split|prepare)")
+    parser.add_argument("--step", help="Run a specific step (extract|clean|features|labels|graph|split|prepare)")
     args = parser.parse_args()
 
     if args.step:

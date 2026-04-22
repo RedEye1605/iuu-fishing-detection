@@ -237,6 +237,12 @@ def clean_events() -> Path:
     df["is_weekend"] = df["day_of_week"].isin([5, 6])
     df["season"] = df["month"].map(lambda m: "wet" if m in [11, 12, 1, 2, 3] else "dry")
 
+    # Cyclical encoding for temporal features (sin/cos preserves adjacency)
+    df["hour_sin"] = np.sin(2 * np.pi * df["hour_of_day"] / 24).astype(np.float32)
+    df["hour_cos"] = np.cos(2 * np.pi * df["hour_of_day"] / 24).astype(np.float32)
+    df["month_sin"] = np.sin(2 * np.pi * df["month"] / 12).astype(np.float32)
+    df["month_cos"] = np.cos(2 * np.pi * df["month"] / 12).astype(np.float32)
+
     df["duration_hours"] = (df["end_time"] - df["start_time"]).dt.total_seconds() / 3600
     df["duration_hours"] = df["duration_hours"].clip(lower=0)
 
@@ -255,6 +261,13 @@ def clean_events() -> Path:
     df["vessel_flag"] = df["vessel_flag"].str.upper().map(lambda x: FLAG_MAP.get(x, x))
     df["is_domestic"] = df["vessel_flag"] == "IDN"
     df["is_foreign"] = ~df["is_domestic"]
+
+    # Flag-of-Convenience (FoC): ITF-listed countries with minimal regulatory oversight
+    # Boerder et al. (2018): FoC-flagged vessels ~3x more likely involved in IUU fishing
+    from ..constants import FOC_FLAGS
+    df["is_foc_flag"] = df["vessel_flag"].isin(FOC_FLAGS).astype(int)
+    n_foc = df["is_foc_flag"].sum()
+    logger.info(f"  FoC-flagged events: {n_foc:,} ({n_foc/len(df)*100:.1f}%)")
 
     logger.info(f"  Flag distribution:\n{df['vessel_flag'].value_counts().head(10).to_string()}")
 

@@ -1,4 +1,4 @@
-# 🐟 IUU Fishing Detection using ST-GAT
+# IUU Fishing Detection using ST-GAT
 
 ## Gemastik XIX 2026 — Data Analytics Category
 
@@ -6,283 +6,117 @@
 
 ---
 
-## 🎯 Overview
+## Overview
 
-Deep learning system to detect IUU fishing in Indonesian waters by analyzing vessel tracking (AIS), satellite detections (VIIRS/SAR), and maritime contextual data using a **Spatiotemporal Graph Attention Network (ST-GAT)**.
+Deep learning system that detects IUU fishing in Indonesian waters by analyzing vessel tracking (AIS) and maritime contextual data through a **Spatiotemporal Graph Attention Network (ST-GAT)**. The system uses vessel-level node features, multi-type graph edges, and weekly temporal snapshots to classify vessels into four IUU risk categories.
 
-### Key Innovation
-- **Graph-based modeling** — Vessels as nodes, spatial proximity as edges
-- **Temporal attention** — Capture behavioral patterns over time
-- **Multi-source fusion** — AIS + SAR + zone boundaries
-- **Explainability** — Identify *why* a vessel is flagged as IUU
-
----
-
-## 👥 Team
-
-- **Toni**
-- **Nafi**
-- **Rhendy**
+### Core Approach
+- **Weakly supervised labeling** — 3-tier rule-based scoring with 12 research-backed IUU indicators
+- **Graph-based modeling** — 14,841 vessel nodes with encounter and co-location edges
+- **Temporal attention** — GRU encoder over weekly graph snapshots
+- **Multi-source fusion** — GFW events, SAR detections, fishing effort, vessel registry
 
 ---
 
-## 📁 Project Structure
+## Team
+
+- **Toni** — Data Engineering, GIS Analysis
+- **Nafi** — Literature Review, Evaluation, Presentation
+- **Rhendy** — ML Engineering, Graph Neural Networks, Model Architecture
+
+---
+
+## Project Structure
 
 ```
 gemastik/
 ├── src/
-│   ├── __init__.py
 │   ├── data/
-│   │   ├── __init__.py
-│   │   ├── constants.py              # Shared constants (paths, flags, bbox)
-│   │   ├── pipeline/                 # Data processing pipeline
-│   │   │   ├── extract.py            # Phase 1: Load & flatten raw data
-│   │   │   ├── clean.py              # Phase 2: Dedup, validate, normalize
-│   │   │   ├── features.py           # Phase 3a: Vessel + behavioral features
-│   │   │   └── enrich.py             # Phase 3b: Cross-source enrichment
-│   │   │   ├── labels.py             # Phase 4: IUU label generation
-│   │   │   ├── graph.py              # Phase 5: Graph construction
-│   │   │   ├── split.py              # Phase 6: Temporal train/val/test split
-│   │   │   └── prepare.py            # Phase 7: Model data preparation
-│   │   └── clients/                  # API clients
-│   │       ├── gfw.py                # GFW API client (events, SAR, effort)
-│   │       └── __init__.py
-│   ├── features/
-│   │   └── graph_builder.py          # Legacy graph placeholder (Phase 5 now in pipeline/)
+│   │   ├── constants.py          # Shared constants, FOC flags, temporal boundaries
+│   │   └── pipeline/
+│   │       ├── extract.py         # Phase 1: Load & flatten raw data
+│   │       ├── clean.py           # Phase 2: Dedup, validate, normalize
+│   │       ├── features.py        # Phase 3: Vessel profiles, behavioral features
+│   │       ├── labels.py          # Phase 4: IUU label generation (3-tier scoring)
+│   │       ├── graph.py           # Phase 5: Graph construction (ST-GAT input)
+│   │       ├── split.py           # Phase 6: Temporal train/val/test split
+│       │       └── prepare.py        # Phase 7: Model data preparation (PyG tensors)
 │   ├── models/
-│   │   └── stgat.py                  # ST-GAT model architecture (Phase 8)
+│   │   └── stgat.py             # ST-GAT model architecture
 │   └── utils/
-│       └── __init__.py
 ├── scripts/
-│   ├── run_pipeline.py               # Master pipeline runner (Phase 1-3)
-│   ├── pull_sar_data.py              # GFW 4Wings SAR data puller
-│   └── download_large_data.sh        # Zenodo data download helper
-├── docs/                             # Documentation
-├── notebooks/                        # Jupyter exploration notebooks
-├── tests/                            # Unit tests
-├── data/                             # Raw & processed data (gitignored)
-├── pyproject.toml                    # Package metadata & dependencies
-└── README.md
+│   └── run_pipeline.py          # Master pipeline runner
+├── docs/
+│   ├── TECHNICAL_DEFENSE.md      # Competition defense paper
+│   ├── PIPELINE_SCHEMA.md        # Data schema documentation
+│   └── PHASE1-RESEARCH-PLAN.md  # Original research plan
+├── data/                         # Raw & processed data (gitignored)
+└── pyproject.toml
 ```
 
 ---
 
-## 🚀 Setup
+## Setup
 
-### Prerequisites
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
-
-### Installation
 ```bash
 cd gemastik
 uv venv .venv --python 3.12
 source .venv/bin/activate
-
-# Core dependencies
-uv pip install -e ".[dev]"
-
-# ML pipeline (Phase 2/3)
-uv pip install -e ".[ml]"
+uv sync --extra ml
 ```
 
-### Environment
-```bash
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-### Download Large Datasets (>100MB)
-
-Zenodo historical effort files are distributed via [GitHub Release](https://github.com/RedEye1605/iuu-fishing-detection/releases/tag/v1.0-data).
+## Running the Pipeline
 
 ```bash
-# Option 1: Setup script (requires gh CLI)
-./scripts/download_large_data.sh
-
-# Option 2: Manual download from the release page → data/raw/zenodo/
+python scripts/run_pipeline.py              # Run all phases (1-7)
+python scripts/run_pipeline.py --phase 4    # Run only labeling
+python scripts/run_pipeline.py --step graph   # Run graph construction
 ```
 
----
+Total runtime: ~15-20 minutes.
 
-## 🚀 Running the Pipeline
+## Dataset
 
-```bash
-python scripts/run_pipeline.py              # Run all phases (1-5)
-python scripts/run_pipeline.py --phase 1    # Run only Phase 1
-python scripts/run_pipeline.py --phase 2    # Run only Phase 2
-python scripts/run_pipeline.py --phase 3    # Run only Phase 3
-python scripts/run_pipeline.py --phase 4    # Run only Phase 4
-python scripts/run_pipeline.py --phase 6    # Run only Phase 6 (temporal split)
-python scripts/run_pipeline.py --step 4.1   # Run specific step
-```
+**511,972 events** across **14,841 vessels** in Indonesian waters (2020-2025).
 
-The pipeline reads from `data/raw/` and writes to `data/processed/`. Total runtime: ~15-20 minutes depending on I/O.
-
----
-
-## 🏷️ IUU Labels
-
-### `data/processed/gfw_events_labeled.parquet`
-- **Rows:** 512,247 events
-- **Columns:** 124
-- **Coverage:** Indonesian waters, 2020–2025
+| Metric | Value |
+|--------|-------|
+| Vessels | 14,841 |
+| Events | 511,972 |
+| Weekly snapshots | 274 (208 train / 24 val / 42 test) |
+| Continuous features | 40 per vessel |
+| Embedding indices | 2 (flag, class) |
+| Edge types | 2 (encounter, colocation) |
+| Edge attributes | 2 (duration_km, distance_km) |
 
 ### Label Distribution
 
-| Label | Count | % | Description |
-|-------|-------|---|-------------|
-| **normal** | 127,268 | 24.8% | Low-risk activity |
-| **suspicious** | 205,301 | 40.1% | Unregistered vessels, encounters |
-| **probable_iuu** | 26,978 | 5.3% | Transshipment indicators |
-| **hard_iuu** | 152,700 | 29.8% | Fisheries law violations |
+| Label | Events | % | Description |
+|-------|--------|---|-------------|
+| normal | 136,442 | 26.7% | Low-risk activity |
+| suspicious | 224,675 | 43.9% | Behavioral anomalies |
+| probable_iuu | 49,508 | 9.7% | Single IUU violation |
+| hard_iuu | 101,347 | 19.8% | Multiple IUU violations |
 
-### Scoring: 11 indicators across 3 tiers
-- **Tier 1 (weight 1.0):** Fishing in MPA, unauthorized foreign, high seas
-- **Tier 2 (weight 0.6):** Encounters, loitering, unregistered, nighttime foreign
-- **Tier 3 (weight 0.3):** High encounter/loitering rate, far offshore, rapid port cycle
+## Model Architecture
 
-Score normalized to [0, 1]; threshold-based label assignment.
+**ST-GAT** with 4-class output, label smoothing, and class weighting. See `docs/TECHNICAL_DEFENSE.md` for full design rationale with academic references.
 
----
+## Documentation
 
-## 📊 Final Dataset
+- [Technical Defense Paper](docs/TECHNICAL_DEFENSE.md) — Complete defense of every design decision
+- [Pipeline Schema](docs/PIPELINE_SCHEMA.md) — Data schema documentation
+- [Research Plan](docs/PHASE1-RESEARCH-PLAN.md) — Original research plan and data sources
 
-### `data/processed/gfw_events_full.parquet`
-- **Rows:** 512,247 events
-- **Columns:** 111
-- **Size:** 80.7 MB
-- **Coverage:** Indonesian waters, 2020–2025
-- **Event types:** Fishing (56%), Loitering (25%), Port Visit (10%), Encounter (9%)
-- **Vessel flags:** 47% domestic, 53% foreign
+## References
 
-### All Output Files
-
-| File | Rows | Cols | Description |
-|------|------|------|-------------|
-| `gfw_events_full.parquet` | 512,247 | 107 | **Enriched events (pre-label)** |
-| `gfw_events_labeled.parquet` | 512,247 | 120 | **Final labeled events (for ML)** |
-| `gfw_events_clean.parquet` | 512,247 | 66 | Cleaned events (pre-enrichment) |
-| `gfw_events_flat.parquet` | 512,272 | 54 | Raw flattened events |
-| `vessel_behavioral_features.parquet` | 14,857 | 28 | Per-vessel behavioral profiles |
-| `vessel_registry.parquet` | 147,924 | 12 | Zenodo vessel registry |
-| `fishing_effort_clean.parquet` | 885,649 | 18 | Cleaned GFW fishing effort |
-| `sar_presence_clean.parquet` | 742,075 | 18 | Cleaned SAR presence |
-| `zenodo_effort_clean.parquet` | 707,118 | 12 | Cleaned Zenodo effort (spatially filtered) |
-| `ports.parquet` | 30 | 3 | Indonesia port locations |
-| `vessel_node_features.parquet` | 14,857 | 42 | Vessel graph node features (normalized) |
-| `encounter_edges.parquet` | 46,239 | — | Encounter edges (transshipment) |
-| `colocation_edges.parquet` | 477,914 | — | Co-location edges (temporally scoped) |
-| `snapshot_metadata.parquet` | 283 | — | Weekly graph snapshot stats |
-| `feature_scaler.pkl` | — | — | StandardScaler for inference |
-| **Model Data (Phase 7)** |
-| `node_features.npy` | 14,857 | 39 | All-numeric, normalized (mean=0, std=1) |
-| `node_labels.npy` | 14,857 | — | 4-class labels (0-3) |
-| `class_weights.npy` | — | 4 | Inverse-frequency weights |
-| `vessel_flag_embed.npy` | — | (128, 8) | Xavier init for flag embedding |
-| `vessel_class_embed.npy` | — | (17, 8) | Xavier init for class embedding |
-| `encoders.pkl` | — | — | LabelEncoder objects + frequency maps |
-| `mmsi_index.json` | — | — | MMSI → global node index |
-| `snapshots/train_snapshots.pkl` | — | — | 215 weekly snapshots (PyG format) |
-| `snapshots/val_snapshots.pkl` | — | — | 26 weekly snapshots (PyG format) |
-| `snapshots/test_snapshots.pkl` | — | — | 42 weekly snapshots (PyG format) |
-
-### Model Config (Phase 7)
-
-```python
-in_channels = 39        # Input features per vessel
-num_classes = 4          # 4-class classification (normal, suspicious, probable, hard)
-flag_embed_dim = 8       # Embedding dimension for vessel flag (128 classes)
-class_embed_dim = 8      # Embedding dimension for vessel class (17 classes)
-```
-
-**Class weights:** `[1.61, 0.41, 1.57, 3.61]` — apply to CrossEntropyLoss
-
-**Encoding strategy:**
-- `vessel_flag`: frequency encoding (regulatory oversight proxy) + label code for embedding
-- `reg_vessel_class`: label encoding for embedding lookup
-- Timestamps dropped: `first_seen`, `last_seen` (model uses snapshot positions)
-- `mmsi`: mapped to global node index via `mmsi_index.json`
-
-### Feature Categories (111 columns)
-
-| Category | Columns | Description |
-|----------|---------|-------------|
-| Core | 12 | ID, type, timestamps, coordinates |
-| Vessel | 4 | Name, ID, flag, type |
-| Regions | 5 | EEZ, MPA, RFMO, FAO zones |
-| Authorization | 5 | Auth status, risk flags |
-| Event-specific | 20 | Port, encounter, loitering details |
-| Temporal | 8 | Hour, day, month, season, etc. |
-| Registry | 9 | Vessel class, length, engine, tonnage |
-| Spatial | 5 | Grid cell, sea zone, nearest port |
-| SAR/Effort | 4 | Detection density, effort density |
-| Behavioral | 22 | Per-vessel fishing/encounter/loitering patterns |
-
----
-
-## ⚠️ Known Limitations
-
-| Limitation | Impact | Notes |
-|-----------|--------|-------|
-| Registry fill rate 50.3% | Missing vessel specs for ~half of vessels | 1,598/14,857 MMSIs matched in Zenodo registry |
-| Raw weather/VIIRS data excluded | BMKG (2024 only, 20% coverage) and VIIRS (5K sample, 0.01% signal) not used in pipeline | Focus on SAR + AIS as primary signals |
-| No EEZ/MPA shapefile spatial join | Uses GFW regions field instead | GFW regions data is reliable for Indonesia |
-| `potential_risk` only 0.4% True | Severe class imbalance | May need anomaly detection approach |
-| 30 ports only | Limited port coverage | Major ports covered; add from OSM for more |
-
----
-
-## 📅 Timeline
-
-### ✅ Week 1 — Data Acquisition (COMPLETE)
-- [x] Project structure & configuration
-- [x] GFW API integration (512K+ events)
-- [x] Synthetic data generation
-- [x] VIIRS / BMKG / BPS sample data
-- [x] EEZ shapefiles & port data
-
-### ✅ Week 2 — Preprocessing & EDA (COMPLETE)
-- [x] Phase 1: Load & Flatten (all sources → Parquet)
-- [x] Phase 2: Clean & Validate (dedup, flag standardize, outliers)
-- [x] Phase 3: Feature Engineering (vessel profiles, behavioral, enrichment)
-- [x] Phase 4: IUU Label Generation (11 indicators, 4-class labels)
-- [x] Full pipeline audit and bug fixes
-- [x] Documentation updated to match implementation
-
-### 🔄 Week 3 — Model Development
-- [x] Phase 5: Graph Construction (vessel-centric, 14,857 nodes, 378K edges, 283 weekly snapshots, normalized features)
-- [x] Phase 6: Temporal Train/Val/Test Split (215/26/42 snapshots, strict temporal boundaries)
-- [x] Phase 7: Model Data Preparation (encoding, class weights, PyG snapshots)
-- [ ] Phase 8: ST-GAT architecture implementation & training
-
-### 📅 Week 4 — Evaluation & Polish
-- [ ] Model evaluation (precision, recall, F1, AUC)
-- [ ] Explainability analysis
-- [ ] Visualization dashboard
-- [ ] Paper & presentation
-
----
-
-## 📖 Documentation
-
-- [Pipeline Implementation Plan](docs/DATA_PIPELINE_IMPLEMENTATION_PLAN.md) — Full pipeline details
-- [Pipeline Schema](docs/PIPELINE_SCHEMA.md) — All parquet file schemas
-- [Audit Report](docs/AUDIT_REPORT.md) — Data quality audit
-- [Data Quality Report](docs/DATA_QUALITY_REPORT.md) — ML readiness assessment
-- [Phase 1 Findings](docs/PHASE1_AUDIT_FINDINGS.md) — Initial data audit
-- [CHANGELOG.md](CHANGELOG.md) — Version history
-
----
-
-## 📖 References
-
-1. Velickovic et al. (2018) — Graph Attention Networks
-2. Yu et al. (2018) — Spatio-Temporal Graph Convolutional Networks
-3. Global Fishing Watch — https://globalfishingwatch.org/
-4. Elvidge et al. — VIIRS Boat Detection, EOG
-5. NOAA — Cross-matching VMS with VIIRS for IUU detection
-
----
-
-*Last updated: 2026-04-22*
+1. Velickovic et al. (2018) — Graph Attention Networks (GAT)
+2. Brody et al. (2022) — How Attentive are Graph Attention Networks? (GATv2)
+3. Miller et al. (2018) — Stopping the Hidden Hunt for Seafood (GFW encounters)
+4. Boerder et al. (2018) — Identifying Global Patterns of Transshipment (FoC flags)
+5. Kroodsma et al. (2018) — Tracking the Global Footprint of Fisheries (GFW fishing)
+6. Ford et al. (2018) — Revealing AIS Gaps (AIS disabling detection)
+7. McDonald et al. (2021) — Identifying Forced Labor (PU learning for maritime)
+8. Rossi et al. (2020) — Temporal Graph Networks (temporal message passing)
+9. Szegedy et al. (2016) — Rethinking the Inception Architecture (label smoothing)
+10. Li et al. (2018) — Deeper Insights into Graph Convolutional Networks (over-smoothing)
