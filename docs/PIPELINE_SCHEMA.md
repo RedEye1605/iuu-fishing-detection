@@ -149,3 +149,35 @@ Weekly graph snapshot statistics.
 
 ### `graph_snapshots.pkl`
 Full serialized graph data (edge indices, node feature tensors, temporal mappings). Gitignored — reconstructible via `python scripts/run_pipeline.py --phase 5`.
+
+---
+
+## Phase 6: Temporal Split (`split.py`)
+
+### `split/snapshot_split.json`
+Mapping of weekly snapshot identifiers to train/val/test sets.
+
+```json
+{
+  "train": ["2018_W10", ..., "2023_W52"],   // 215 snapshots
+  "val":   ["2024_W01", ..., "2024_W26"],   // 26 snapshots
+  "test":  ["2024_W27", ..., "2025_W16"]    // 42 snapshots
+}
+```
+
+### `split/split_stats.json`
+Per-split distribution statistics (events, vessels, edges, label/flag/event_type distributions).
+
+### `split/train/snapshot_data.pkl`, `split/val/...`, `split/test/...`
+Per-split snapshot data with int64 numpy arrays:
+- `vessel_indices` — vessel node indices for each snapshot
+- `src`, `dst` — edge source/destination indices
+- `labels` — IUU label (0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu)
+- `n_vessels`, `n_edges`, `edge_types` — metadata
+
+**Split boundaries:**
+- Train: 2018-W10 → 2023-W52 (215 snapshots, 379K events, 74%)
+- Val: 2024-W01 → 2024-W26 (26 snapshots, 58K events, 11%)
+- Test: 2024-W27 → 2025-W16 (42 snapshots, 75K events, 15%)
+
+**No temporal leakage:** strict chronological ordering, no overlap.

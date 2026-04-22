@@ -41,14 +41,15 @@ gemastik/
 │   │   │   ├── features.py           # Phase 3a: Vessel + behavioral features
 │   │   │   └── enrich.py             # Phase 3b: Cross-source enrichment
 │   │   │   ├── labels.py             # Phase 4: IUU label generation
-│   │   │   └── graph.py              # Phase 5: Graph construction
+│   │   │   ├── graph.py              # Phase 5: Graph construction
+│   │   │   └── split.py              # Phase 6: Temporal train/val/test split
 │   │   └── clients/                  # API clients
 │   │       ├── gfw.py                # GFW API client (events, SAR, effort)
 │   │       └── __init__.py
 │   ├── features/
 │   │   └── graph_builder.py          # Legacy graph placeholder (Phase 5 now in pipeline/)
 │   ├── models/
-│   │   └── stgat.py                  # ST-GAT model architecture (Phase 6)
+│   │   └── stgat.py                  # ST-GAT model architecture (Phase 7)
 │   └── utils/
 │       └── __init__.py
 ├── scripts/
@@ -111,7 +112,7 @@ python scripts/run_pipeline.py --phase 1    # Run only Phase 1
 python scripts/run_pipeline.py --phase 2    # Run only Phase 2
 python scripts/run_pipeline.py --phase 3    # Run only Phase 3
 python scripts/run_pipeline.py --phase 4    # Run only Phase 4
-python scripts/run_pipeline.py --phase 5    # Run only Phase 5
+python scripts/run_pipeline.py --phase 6    # Run only Phase 6 (temporal split)
 python scripts/run_pipeline.py --step 4.1   # Run specific step
 ```
 
@@ -222,7 +223,8 @@ Score normalized to [0, 1]; threshold-based label assignment.
 
 ### 🔄 Week 3 — Model Development
 - [x] Phase 5: Graph Construction (vessel-centric, 14,857 nodes, 378K edges, 283 weekly snapshots, normalized features)
-- [ ] Phase 6: ST-GAT architecture implementation & training
+- [x] Phase 6: Temporal Train/Val/Test Split (215/26/42 snapshots, strict temporal boundaries)
+- [ ] Phase 7: ST-GAT architecture implementation & training
 
 ### 📅 Week 4 — Evaluation & Polish
 - [ ] Model evaluation (precision, recall, F1, AUC)
