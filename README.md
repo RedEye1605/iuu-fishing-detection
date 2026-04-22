@@ -158,20 +158,21 @@ Score normalized to [0, 1]; threshold-based label assignment.
 
 | File | Rows | Cols | Description |
 |------|------|------|-------------|
-| `gfw_events_full.parquet` | 512,247 | 111 | **Enriched events (pre-label)** |
-| `gfw_events_labeled.parquet` | 512,247 | 124 | **Final labeled events (for ML)** |
+| `gfw_events_full.parquet` | 512,247 | 107 | **Enriched events (pre-label)** |
+| `gfw_events_labeled.parquet` | 512,247 | 120 | **Final labeled events (for ML)** |
 | `gfw_events_clean.parquet` | 512,247 | 66 | Cleaned events (pre-enrichment) |
 | `gfw_events_flat.parquet` | 512,272 | 54 | Raw flattened events |
-| `vessel_behavioral_features.parquet` | 14,857 | 32 | Per-vessel behavioral profiles |
+| `vessel_behavioral_features.parquet` | 14,857 | 28 | Per-vessel behavioral profiles |
 | `vessel_registry.parquet` | 147,924 | 12 | Zenodo vessel registry |
 | `fishing_effort_clean.parquet` | 885,649 | 18 | Cleaned GFW fishing effort |
 | `sar_presence_clean.parquet` | 742,075 | 18 | Cleaned SAR presence |
 | `zenodo_effort_clean.parquet` | 707,118 | 12 | Cleaned Zenodo effort (spatially filtered) |
 | `ports.parquet` | 30 | 3 | Indonesia port locations |
-| `vessel_node_features.parquet` | 14,857 | 55 | Vessel graph node features |
+| `vessel_node_features.parquet` | 14,857 | 47 | Vessel graph node features (normalized) |
 | `encounter_edges.parquet` | 46,239 | — | Encounter edges (transshipment) |
-| `colocation_edges.parquet` | 138,049 | — | Co-location edges (same grid/day) |
+| `colocation_edges.parquet` | 477,914 | — | Co-location edges (temporally scoped) |
 | `snapshot_metadata.parquet` | 283 | — | Weekly graph snapshot stats |
+| `feature_scaler.pkl` | — | — | StandardScaler for inference |
 
 ### Feature Categories (111 columns)
 
@@ -220,7 +221,7 @@ Score normalized to [0, 1]; threshold-based label assignment.
 - [x] Documentation updated to match implementation
 
 ### 🔄 Week 3 — Model Development
-- [x] Phase 5: Graph Construction (vessel-centric, 14,857 nodes, 184K edges, 283 weekly snapshots)
+- [x] Phase 5: Graph Construction (vessel-centric, 14,857 nodes, 378K edges, 283 weekly snapshots, normalized features)
 - [ ] Phase 6: ST-GAT architecture implementation & training
 
 ### 📅 Week 4 — Evaluation & Polish

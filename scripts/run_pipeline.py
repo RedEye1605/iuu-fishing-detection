@@ -24,12 +24,16 @@ STEPS = [
     ("clean",   "src.data.pipeline.clean",   "run_clean_all"),
     ("features", "src.data.pipeline.features", "run_features_all"),
     ("enrich",  "src.data.pipeline.enrich",   "run_enrich_all"),
+    ("labels",  "src.data.pipeline.labels",   "run_label_all"),
+    ("graph",   "src.data.pipeline.graph",    "run_graph_all"),
 ]
 
 PHASE_MAP = {
     "1": ["extract"],
     "2": ["clean"],
     "3": ["features", "enrich"],
+    "4": ["labels"],
+    "5": ["graph"],
 }
 
 
@@ -52,9 +56,16 @@ def run_step(step_id: str) -> None:
 
 
 def main() -> None:
+    import sys
+    from pathlib import Path
+    # Ensure project root is on sys.path for `src` imports
+    project_root = str(Path(__file__).resolve().parent.parent)
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
     parser = argparse.ArgumentParser(description="IUU Fishing Detection Pipeline Runner")
-    parser.add_argument("--phase", choices=["1","2","3"], help="Run only this phase")
-    parser.add_argument("--step", help="Run a specific step (extract|clean|features|enrich)")
+    parser.add_argument("--phase", choices=["1","2","3","4","5"], help="Run only this phase")
+    parser.add_argument("--step", help="Run a specific step (extract|clean|features|enrich|labels|graph)")
     args = parser.parse_args()
 
     if args.step:
@@ -63,8 +74,8 @@ def main() -> None:
         for step_id in PHASE_MAP[args.phase]:
             run_step(step_id)
     else:
-        logger.info("🚀 Running full pipeline (Phase 1 → 2 → 3)")
-        for phase in ["1","2","3"]:
+        logger.info("🚀 Running full pipeline (Phase 1 → 5)")
+        for phase in ["1","2","3","4","5"]:
             logger.info(f"\n{'='*60}\n  PHASE {phase}\n{'='*60}")
             for step_id in PHASE_MAP[phase]:
                 run_step(step_id)

@@ -270,16 +270,15 @@ def compute_behavioral_features() -> Path:
     # Encounter patterns
     logger.info("  Encounter patterns...")
     encounters = df[df["event_type"] == "encounter"].copy()
-    enc_stats = encounters.groupby("mmsi").agg(encounters_total=("event_type", "count")).reset_index()
+    # Only track foreign encounter count; total count already in encounter_count
     foreign_enc = encounters[~encounters["is_domestic"]].groupby("mmsi").size().reset_index(name="encounters_with_foreign")
-    enc_stats = enc_stats.merge(foreign_enc, on="mmsi", how="left")
-    enc_stats["encounters_with_foreign"] = enc_stats["encounters_with_foreign"].fillna(0).astype(int)
-    vessel_stats = vessel_stats.merge(enc_stats, on="mmsi", how="left")
+    foreign_enc["encounters_with_foreign"] = foreign_enc["encounters_with_foreign"].fillna(0).astype(int)
+    vessel_stats = vessel_stats.merge(foreign_enc, on="mmsi", how="left")
+    vessel_stats["encounters_with_foreign"] = vessel_stats["encounters_with_foreign"].fillna(0).astype(int)
 
     # Loitering patterns
     logger.info("  Loitering patterns...")
     loiter = df[df["event_type"] == "loitering"].groupby("mmsi").agg(
-        loitering_events=("event_type", "count"),
         total_loitering_hours=("duration_hours", "sum"),
     ).reset_index()
     vessel_stats = vessel_stats.merge(loiter, on="mmsi", how="left")
@@ -287,24 +286,21 @@ def compute_behavioral_features() -> Path:
     # Port visit patterns
     logger.info("  Port visit patterns...")
     ports = df[df["event_type"] == "port_visit"].groupby("mmsi").agg(
-        port_visits=("event_type", "count"),
         avg_port_duration=("duration_hours", "mean"),
     ).reset_index()
     vessel_stats = vessel_stats.merge(ports, on="mmsi", how="left")
 
     # Fill NaN
     fill_zero = ["fishing_count", "encounter_count", "loitering_count", "port_visit_count",
-                 "encounters_total", "encounters_with_foreign", "loitering_events",
-                 "port_visits", "unique_grid_cells"]
+                 "encounters_with_foreign", "unique_grid_cells"]
     for col in fill_zero:
         if col in vessel_stats.columns:
             vessel_stats[col] = vessel_stats[col].fillna(0).astype(int)
 
     # Derived ratios
-    vessel_stats["encounter_rate"] = vessel_stats["encounters_total"] / vessel_stats["total_events"].clip(lower=1)
-    vessel_stats["loitering_rate"] = vessel_stats["loitering_events"] / vessel_stats["total_events"].clip(lower=1)
+    vessel_stats["encounter_rate"] = vessel_stats["encounter_count"] / vessel_stats["total_events"].clip(lower=1)
+    vessel_stats["loitering_rate"] = vessel_stats["loitering_count"] / vessel_stats["total_events"].clip(lower=1)
     vessel_stats["fishing_ratio"] = vessel_stats["fishing_count"] / vessel_stats["total_events"].clip(lower=1)
-    vessel_stats["avg_fishing_hours_per_trip"] = vessel_stats["total_fishing_hours"] / vessel_stats["fishing_count"].clip(lower=1)
 
     logger.info(f"Shape: {len(vessel_stats):,} vessels × {len(vessel_stats.columns)} cols")
 

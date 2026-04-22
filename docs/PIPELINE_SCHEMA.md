@@ -73,10 +73,10 @@ Raw flattened GFW events before cleaning. Same core schema as above but without 
 ### `gfw_events_clean.parquet` (512,247 rows × 66 cols)
 After dedup + cleaning. Adds temporal features, flag standardization, speed flags, domestic/foreign flags.
 
-### `vessel_behavioral_features.parquet` (14,857 rows × 32 cols)
+### `vessel_behavioral_features.parquet` (14,857 rows × 28 cols)
 Per-vessel aggregated features. Key: `mmsi` (string, unique).
 
-`mmsi` (str), `total_events` (i64), `first_seen` (ts UTC), `last_seen` (ts UTC), `vessel_flag` (str), `is_domestic` (bool), `tracking_span_days` (f64), `fishing_count` (i64), `encounter_count` (i64), `loitering_count` (i64), `port_visit_count` (i64), `avg_fishing_duration` (f64), `total_fishing_hours` (f64), `avg_fishing_distance` (f64), `fishing_lat_mean` (f64), `fishing_lon_mean` (f64), `avg_distance_shore` (f64), `max_distance_shore` (i64), `spatial_range_km` (f64), `unique_grid_cells` (i64), `avg_speed_knots` (f64), `speed_std` (f64), `encounters_total` (i64), `encounters_with_foreign` (i64), `loitering_events` (i64), `total_loitering_hours` (f64), `port_visits` (i64), `avg_port_duration` (f64), `encounter_rate` (f64), `loitering_rate` (f64), `fishing_ratio` (f64), `avg_fishing_hours_per_trip` (f64)
+`mmsi` (str), `total_events` (i64), `first_seen` (ts UTC), `last_seen` (ts UTC), `vessel_flag` (str), `is_domestic` (bool), `tracking_span_days` (f64), `fishing_count` (i64), `encounter_count` (i64), `loitering_count` (i64), `port_visit_count` (i64), `avg_fishing_duration` (f64), `total_fishing_hours` (f64), `avg_fishing_distance` (f64), `fishing_lat_mean` (f64), `fishing_lon_mean` (f64), `avg_distance_shore` (f64), `max_distance_shore` (i64), `spatial_range_km` (f64), `unique_grid_cells` (i64), `avg_speed_knots` (f64), `speed_std` (f64), `encounters_with_foreign` (i64), `total_loitering_hours` (f64), `avg_port_duration` (f64), `encounter_rate` (f64), `loitering_rate` (f64), `fishing_ratio` (f64)
 
 ### `vessel_registry.parquet` (147,924 rows × 12 cols)
 Zenodo vessel registry. Key: `mmsi` (string).
@@ -108,34 +108,39 @@ Pre-clean. `date` (str), `year` (i64), `month` (i64), `cell_ll_lat` (f64), `cell
 
 ## Graph Output Files (Phase 5)
 
-### `vessel_node_features.parquet` (14,857 rows × 55 cols)
-Per-vessel feature matrix for graph neural network. Key: `mmsi` (string, unique).
+### `vessel_node_features.parquet` (14,857 rows × 47 cols)
+Per-vessel feature matrix for graph neural network. Features are StandardScaler-normalized. Key: `mmsi` (string, unique).
 
 **Spatial (4):** `mean_lat` (f64), `mean_lon` (f64), `std_lat` (f64), `std_lon` (f64)
 
 **Temporal (3):** `mean_hour` (f64), `nighttime_ratio` (f64), `weekend_ratio` (f64)
 
-**Behavioral (31):** All 31 columns from `vessel_behavioral_features.parquet` (fishing_count, loitering_rate, encounter_rate, spatial_range_km, unique_grid_cells, etc.)
+**Behavioral (27):** From `vessel_behavioral_features.parquet` (fishing_count, loitering_rate, encounter_rate, spatial_range_km, unique_grid_cells, etc.)
 
 **Registry (4):** `reg_length_m` (f64), `reg_tonnage_gt` (f64), `reg_engine_power_kw` (f64), `reg_vessel_class` (str)
 
-**Risk (5):** `max_iuu_score` (f64), `unauthorized_count` (i64), `encounter_count_ind` (i64), `highseas_count` (i64), `mpa_count` (i64)
+**Registry indicator (1):** `has_registry` (int: 0/1)
 
-**Context (4):** `mean_sar_detections` (f64), `mean_effort_hours` (f64), `mean_distance_shore` (f64), `in_highseas_ratio` (f64)
+**Risk proxies (3):** `unauthorized_count` (i64), `highseas_count` (i64), `mpa_count` (i64)
 
-**Label (1):** `vessel_iuu_label` (int: 0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu)
+**Context (3):** `mean_sar_detections` (f64), `mean_effort_hours` (f64), `in_highseas_ratio` (f64)
+
+**Label (1):** `vessel_iuu_label` (int: 0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu) — NOT normalized
 
 **Key (1):** `mmsi` (str)
+
+### `feature_scaler.pkl`
+Pickled dict with `scaler` (StandardScaler) and `columns` (list of normalized column names). Use for inference-time normalization.
 
 ### `encounter_edges.parquet` (46,239 rows)
 Direct vessel-to-vessel encounter edges from transshipment events.
 
 `mmsi_1` (str), `mmsi_2` (str), `timestamp` (ts UTC), plus encounter metadata columns
 
-### `colocation_edges.parquet` (138,049 rows)
-Vessel pairs found in the same 0.1° grid cell on the same day.
+### `colocation_edges.parquet` (477,914 rows)
+Vessel pairs found in the same 0.1° grid cell on the same day. Temporally scoped — each edge has an `event_date`.
 
-`mmsi_1` (str), `mmsi_2` (str), plus temporal/spatial context columns
+`mmsi_1` (str), `mmsi_2` (str), `event_date` (date), `edge_type` (str: "colocation")
 
 ### `snapshot_metadata.parquet` (283 rows)
 Weekly graph snapshot statistics.
