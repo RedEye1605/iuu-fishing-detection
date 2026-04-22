@@ -42,14 +42,15 @@ gemastik/
 │   │   │   └── enrich.py             # Phase 3b: Cross-source enrichment
 │   │   │   ├── labels.py             # Phase 4: IUU label generation
 │   │   │   ├── graph.py              # Phase 5: Graph construction
-│   │   │   └── split.py              # Phase 6: Temporal train/val/test split
+│   │   │   ├── split.py              # Phase 6: Temporal train/val/test split
+│   │   │   └── prepare.py            # Phase 7: Model data preparation
 │   │   └── clients/                  # API clients
 │   │       ├── gfw.py                # GFW API client (events, SAR, effort)
 │   │       └── __init__.py
 │   ├── features/
 │   │   └── graph_builder.py          # Legacy graph placeholder (Phase 5 now in pipeline/)
 │   ├── models/
-│   │   └── stgat.py                  # ST-GAT model architecture (Phase 7)
+│   │   └── stgat.py                  # ST-GAT model architecture (Phase 8)
 │   └── utils/
 │       └── __init__.py
 ├── scripts/
@@ -224,7 +225,8 @@ Score normalized to [0, 1]; threshold-based label assignment.
 ### 🔄 Week 3 — Model Development
 - [x] Phase 5: Graph Construction (vessel-centric, 14,857 nodes, 378K edges, 283 weekly snapshots, normalized features)
 - [x] Phase 6: Temporal Train/Val/Test Split (215/26/42 snapshots, strict temporal boundaries)
-- [ ] Phase 7: ST-GAT architecture implementation & training
+- [x] Phase 7: Model Data Preparation (encoding, class weights, PyG snapshots)
+- [ ] Phase 8: ST-GAT architecture implementation & training
 
 ### 📅 Week 4 — Evaluation & Polish
 - [ ] Model evaluation (precision, recall, F1, AUC)
