@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from ..constants import (
-    PROCESSED_DIR, GFW_RAW_DIR, PORTS_FILE,
+    PROCESSED_DIR, GFW_RAW_DIR, PORTS_FILE, TRAIN_CUTOFF,
     GFW_EVENTS_CLEAN, VESSEL_REGISTRY_DEDUP,
     GFW_EVENTS_ENRICHED, VESSEL_BEHAVIORAL,
 )
@@ -201,6 +201,12 @@ def compute_behavioral_features() -> Path:
 
     df = pd.read_parquet(INPUT / GFW_EVENTS_ENRICHED, columns=cols)
     logger.info(f"Loaded: {len(df):,} events from {df['mmsi'].nunique():,} vessels")
+
+    # Use only training period for behavioral profiling (prevents label leakage)
+    train_cutoff = pd.Timestamp(TRAIN_CUTOFF, tz="UTC")
+    df_all = df.copy()
+    df = df[df["start_time"] < train_cutoff].copy()
+    logger.info(f"Training period only: {len(df):,} events from {df['mmsi'].nunique():,} vessels")
 
     df = df.sort_values(["mmsi", "start_time"]).reset_index(drop=True)
 

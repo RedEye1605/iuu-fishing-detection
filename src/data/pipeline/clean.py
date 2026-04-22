@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 from ..constants import (
-    PROCESSED_DIR, FLAG_MAP, INDONESIA_BBOX,
+    PROCESSED_DIR, FLAG_MAP, INDONESIA_BBOX, DATA_START,
     GFW_EVENTS_FLAT, SAR_PRESENCE_FLAT, FISHING_EFFORT_FLAT, VESSEL_REGISTRY,
     ZENODO_EFFORT_FLAT,
     GFW_EVENTS_DEDUP, SAR_PRESENCE_DEDUP, FISHING_EFFORT_DEDUP,
@@ -241,6 +241,14 @@ def clean_events() -> Path:
     df["duration_hours"] = df["duration_hours"].clip(lower=0)
 
     logger.info(f"  Date range: {df['start_time'].min()} → {df['start_time'].max()}")
+
+    # --- Filter pre-2020 outliers ---
+    data_start = pd.Timestamp(DATA_START, tz="UTC")
+    pre_start = df["start_time"] < data_start
+    n_pre_start = pre_start.sum()
+    if n_pre_start > 0:
+        df = df[~pre_start].copy()
+        logger.info(f"  Removed {n_pre_start:,} events before {DATA_START}")
 
     # --- Flag standardization ---
     logger.info("--- Flag Standardization ---")

@@ -1,17 +1,17 @@
 {
   "train": {
-    "n_events": 379596,
+    "n_events": 379372,
     "pct_events": 74.1,
-    "n_vessels": 12883,
-    "n_snapshots": 215,
-    "total_edges": 289941,
+    "n_vessels": 12871,
+    "n_snapshots": 210,
+    "total_edges": 289816,
     "encounter_edges": 36807,
-    "colocation_edges": 253134,
+    "colocation_edges": 253009,
     "label_distribution": {
-      "hard_iuu": 0.246,
-      "normal": 0.237,
-      "probable_iuu": 0.065,
-      "suspicious": 0.452
+      "hard_iuu": 0.171,
+      "normal": 0.265,
+      "probable_iuu": 0.072,
+      "suspicious": 0.492
     },
     "flag_distribution": {
       "domestic": 0.493,
@@ -33,10 +33,10 @@
     "encounter_edges": 3578,
     "colocation_edges": 35427,
     "label_distribution": {
-      "hard_iuu": 0.383,
-      "normal": 0.274,
-      "probable_iuu": 0.033,
-      "suspicious": 0.31
+      "hard_iuu": 0.231,
+      "normal": 0.286,
+      "probable_iuu": 0.149,
+      "suspicious": 0.334
     },
     "flag_distribution": {
       "domestic": 0.393,
@@ -58,10 +58,10 @@
     "encounter_edges": 5854,
     "colocation_edges": 43528,
     "label_distribution": {
-      "hard_iuu": 0.496,
-      "normal": 0.287,
-      "probable_iuu": 0.007,
-      "suspicious": 0.21
+      "hard_iuu": 0.309,
+      "normal": 0.29,
+      "probable_iuu": 0.183,
+      "suspicious": 0.218
     },
     "flag_distribution": {
       "domestic": 0.418,

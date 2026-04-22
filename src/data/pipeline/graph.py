@@ -38,7 +38,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ..constants import PROCESSED_DIR, GFW_EVENTS_LABELED, VESSEL_BEHAVIORAL
+from ..constants import PROCESSED_DIR, GFW_EVENTS_LABELED, VESSEL_BEHAVIORAL, TRAIN_CUTOFF
 
 logger = logging.getLogger(__name__)
 INPUT = PROCESSED_DIR
@@ -53,55 +53,69 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
     """Build per-vessel node feature matrix.
 
     Aggregates event-level data to vessel-level features suitable for
-    graph neural network input. Features are kept raw — normalization
-    happens in the model's data loader.
+    graph neural network input. Behavioral and temporal aggregations use
+    training period only to prevent information leakage. Registry and
+    grid-level context features use all available data (static properties).
 
     Args:
         df: Labeled events DataFrame.
 
     Returns:
-        DataFrame with one row per vessel, columns are node features.
+        Tuple of (DataFrame with one row per vessel, feature column list).
     """
     logger.info("--- Building Vessel Node Features ---")
 
-    # Start with behavioral features (already computed per vessel)
+    # Split: training period for behavioral/temporal features, all data for static
+    train_cutoff = pd.Timestamp(TRAIN_CUTOFF, tz="UTC")
+    df_train = df[df["start_time"] < train_cutoff]
+    logger.info(f"  Training period: {len(df_train):,} events, {df_train['mmsi'].nunique():,} vessels")
+    logger.info(f"  All data: {len(df):,} events, {df['mmsi'].nunique():,} vessels")
+
+    # Start with behavioral features (already train-only from Phase 3)
     behavioral = pd.read_parquet(INPUT / VESSEL_BEHAVIORAL)
     logger.info(f"  Behavioral features: {len(behavioral):,} vessels × {len(behavioral.columns)} cols")
 
-    # Aggregate event-level features per vessel
-    logger.info("  Aggregating event-level features per vessel...")
+    # Create node_df from ALL unique vessels, LEFT JOIN behavioral
+    all_mmsi = sorted(df["mmsi"].unique())
+    node_df = pd.DataFrame({"mmsi": all_mmsi}).set_index("mmsi")
+    node_df = node_df.join(behavioral.set_index("mmsi"), how="left")
+    logger.info(f"  After behavioral join: {len(node_df):,} vessels "
+                f"({node_df['total_events'].notna().sum():,} with behavioral data)")
 
-    # Spatial features
-    spatial = df.groupby("mmsi").agg(
+    # Indicator: vessel had training period activity
+    node_df["has_behavioral_data"] = node_df["total_events"].notna().astype(int)
+
+    # Aggregate event-level features — training period only
+    logger.info("  Aggregating event-level features (training period)...")
+
+    # Spatial features (train-only)
+    spatial = df_train.groupby("mmsi").agg(
         mean_lat=("lat", "mean"),
         mean_lon=("lon", "mean"),
         std_lat=("lat", "std"),
         std_lon=("lon", "std"),
-    ).fillna(0)
+    )
 
-    # Temporal features
-    temporal = df.groupby("mmsi").agg(
+    # Temporal features (train-only)
+    temporal = df_train.groupby("mmsi").agg(
         mean_hour=("hour_of_day", "mean"),
         nighttime_ratio=("is_nighttime", "mean"),
         weekend_ratio=("is_weekend", "mean"),
     )
 
-    # Risk-proximate features (raw behavioral proxies, NOT derived from iuu_score)
-    # NOTE: max_iuu_score, mean_iuu_score, iuu_event_count removed — label leakage
-    # NOTE: encounter_count_ind removed — duplicates encounter_count from behavioral
-    risk = df.groupby("mmsi").agg(
+    # Risk-proximate features (train-only — prevents label leakage)
+    risk = df_train.groupby("mmsi").agg(
         unauthorized_count=("ind_unauthorized_foreign", "sum"),
         highseas_count=("ind_high_seas_fishing", "sum"),
         mpa_count=("ind_fishing_in_mpa", "sum"),
     )
 
-    # Registry features (take first non-null per vessel)
+    # Registry features (all data — static vessel properties, no leakage)
     reg_cols = ["reg_length_m", "reg_tonnage_gt", "reg_engine_power_kw",
                 "reg_vessel_class", "vessel_flag", "is_domestic"]
     registry = df.groupby("mmsi")[reg_cols].first()
 
-    # SAR + effort features
-    # NOTE: mean_distance_shore removed — duplicates avg_distance_shore from behavioral
+    # Grid-level context features (all data — location properties, not vessel behavior)
     context = df.groupby("mmsi").agg(
         mean_sar_detections=("sar_total_detections", "mean"),
         mean_effort_hours=("effort_hours_in_cell", "mean"),
@@ -114,8 +128,7 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
         lambda x: x.map(label_map).max()
     ).rename("vessel_iuu_label")
 
-    # Merge all
-    node_df = behavioral.set_index("mmsi")
+    # Merge all — LEFT JOIN preserves ALL vessels, NaN for test-only
     for agg_df in [spatial, temporal, risk, registry, context]:
         # Avoid column collisions
         overlap = [c for c in agg_df.columns if c in node_df.columns]
@@ -125,7 +138,6 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Remove redundant features: fishing_lat/lon_mean ≈ mean_lat/lon (r>0.98)
     redundant = ["fishing_lat_mean", "fishing_lon_mean",
-                 # High correlation with existing features (r>0.90)
                  "max_distance_shore",      # r=0.955 with avg_distance_shore
                  "encounters_with_foreign", # r=0.946 with encounter_count
                  "avg_fishing_distance",    # r=0.913 with avg_fishing_duration
@@ -133,14 +145,23 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
     for c in redundant:
         if c in node_df.columns:
             node_df = node_df.drop(columns=[c])
-            logger.info(f"  Removed redundant feature: {c} (duplicates mean_lat/lon)")
+            logger.info(f"  Removed redundant feature: {c}")
+
+    # Add indicator features for high-NaN columns (helps model distinguish 0 vs unknown)
+    node_df["has_fishing_data"] = node_df["fishing_count"].notna().astype(int)
+    node_df["has_port_data"] = node_df["avg_port_duration"].notna().astype(int)
 
     node_df = node_df.join(vessel_labels, how="left")
 
     # Add has_registry indicator (many vessels have no registry match)
     node_df["has_registry"] = node_df["reg_length_m"].notna().astype(int)
 
+    # Log NaN rates for key feature groups
     logger.info(f"  Node features: {len(node_df):,} vessels × {len(node_df.columns)} cols")
+    for col in ["has_behavioral_data", "has_fishing_data", "has_port_data", "has_registry"]:
+        if col in node_df.columns:
+            n = node_df[col].sum()
+            logger.info(f"    {col}: {n:,} / {len(node_df):,} ({n/len(node_df)*100:.1f}%)")
 
     # Log feature groups
     logger.info(f"  Feature groups:")
@@ -395,16 +416,19 @@ def run_graph_all() -> dict:
     # Step 1: Node features
     node_df, feature_cols = build_vessel_node_features(df)
 
-    # Step 1b: Normalize numeric features (StandardScaler)
+    # Step 1b: Normalize numeric features (StandardScaler fit on training vessels only)
     from sklearn.preprocessing import StandardScaler
     import pickle as pkl
 
     numeric_cols = node_df.select_dtypes(include=[np.number]).columns.tolist()
-    # Exclude the label from normalization
-    normalize_cols = [c for c in numeric_cols if c != "vessel_iuu_label"]
+    # Exclude the label and indicator features from normalization
+    exclude_from_norm = {"vessel_iuu_label", "has_behavioral_data", "has_fishing_data",
+                         "has_port_data", "has_registry", "is_domestic"}
+    normalize_cols = [c for c in numeric_cols if c not in exclude_from_norm]
     logger.info(f"  Normalizing {len(normalize_cols)} numeric features...")
+    logger.info(f"  Excluded from normalization (binary/indicator): {sorted(exclude_from_norm & set(numeric_cols))}")
 
-    # Impute NaN with 0 BEFORE scaling (vessels without fishing/registry data)
+    # Impute NaN with 0 BEFORE scaling (vessels without training period data)
     nan_counts = node_df[normalize_cols].isnull().sum()
     nan_cols = nan_counts[nan_counts > 0]
     if len(nan_cols):
@@ -413,8 +437,12 @@ def run_graph_all() -> dict:
             logger.info(f"    {col}: {n:,} NaN ({n/len(node_df)*100:.1f}%)")
     node_df[normalize_cols] = node_df[normalize_cols].fillna(0)
 
+    # Fit scaler on training-period vessels only, apply to all
+    train_mask = node_df["has_behavioral_data"] == 1
     scaler = StandardScaler()
-    node_df[normalize_cols] = scaler.fit_transform(node_df[normalize_cols])
+    scaler.fit(node_df.loc[train_mask, normalize_cols])
+    node_df[normalize_cols] = scaler.transform(node_df[normalize_cols])
+    logger.info(f"  Scaler fit on {train_mask.sum():,} training vessels, applied to all {len(node_df):,}")
 
     # Log scale stats
     logger.info(f"  After normalization — sample stats:")

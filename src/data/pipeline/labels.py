@@ -43,7 +43,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ..constants import PROCESSED_DIR, GFW_EVENTS_FULL, GFW_EVENTS_LABELED
+from ..constants import PROCESSED_DIR, GFW_EVENTS_FULL, GFW_EVENTS_LABELED, TRAIN_CUTOFF
 
 logger = logging.getLogger(__name__)
 INPUT = PROCESSED_DIR
@@ -55,9 +55,27 @@ TIER2_WEIGHT = 0.6
 TIER3_WEIGHT = 0.3
 
 # ===== LABEL THRESHOLDS =====
-HARD_IUU_THRESHOLD = 0.5
-PROBABLE_IUU_THRESHOLD = 0.3
-SUSPICIOUS_THRESHOLD = 0.15
+# Thresholds aligned with discrete score values from the weighted tier formula:
+#   score = (t1 + t2 + t3) / 1.9
+#   t1 = tier1_any * 1.0,  t2 = (tier2_count.clip(2)/2) * 0.6,  t3 = (tier3_count.clip(2)/2) * 0.3
+#
+# Key score levels:
+#   0.000 = no indicators
+#   0.079 = 1 Tier 3 only
+#   0.158 = 1 Tier 2 or 2 Tier 3
+#   0.237 = 1 Tier 2 + 1 Tier 3
+#   0.526 = Tier 1 only (hard evidence, no behavioral anomalies)
+#   0.605 = Tier 1 + 1 Tier 3
+#   0.684 = Tier 1 + 1 Tier 2
+#
+# Threshold rationale:
+#   hard_iuu:     ≥ 0.55 → Tier 1 + additional suspicious signals (multi-signal IUU)
+#   probable_iuu: ≥ 0.50 → Tier 1 only (single hard IUU violation, no behavioral anomalies)
+#   suspicious:   ≥ 0.10 → any Tier 2 or 3 indicator (behavioral anomaly)
+#   normal:       < 0.10 → no significant indicators
+HARD_IUU_THRESHOLD = 0.55
+PROBABLE_IUU_THRESHOLD = 0.50
+SUSPICIOUS_THRESHOLD = 0.10
 
 
 def compute_tier1_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -86,11 +104,20 @@ def compute_tier1_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     # Unauthorized foreign vessel fishing in EEZ
     # Foreign + not_authorized + fishing + NOT in high seas (i.e., inside EEZ)
+    # Refinement: exclude vessels with documented Indonesian port visits
+    # (port visits imply customs/immigration clearance, suggesting legitimate access)
+    idn_port_vessels = set(df[
+        (df["event_type"] == "port_visit")
+        & (df["port_country_flag"] == "IDN")
+    ]["mmsi"].unique())
+    logger.info(f"  Vessels with IDN port visits (excluded): {len(idn_port_vessels):,}")
+
     df["ind_unauthorized_foreign"] = (
         (df["event_type"] == "fishing")
         & (df["is_foreign"] == True)
         & (df["authorization_status"] == "not_authorized")
         & (df["in_highseas"] == False)
+        & ~df["mmsi"].isin(idn_port_vessels)
     ).astype(int)
     n = df["ind_unauthorized_foreign"].sum()
     logger.info(f"  unauthorized_foreign: {n:,} events ({n/len(df)*100:.2f}%)")
@@ -197,18 +224,23 @@ def compute_tier3_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     logger.info("--- Tier 3: Behavioral Anomaly Indicators ---")
 
-    # High encounter rate: > p75 of encounter_rate
-    enc_p75 = df["encounter_rate"].quantile(0.75)
+    # Compute percentile thresholds from training period only (prevents leakage)
+    train_cutoff = pd.Timestamp(TRAIN_CUTOFF, tz="UTC")
+    df_train = df[df["start_time"] < train_cutoff]
+    logger.info(f"  Computing thresholds from training period: {len(df_train):,} events")
+
+    # High encounter rate: > p75 of encounter_rate (training period)
+    enc_p75 = df_train["encounter_rate"].quantile(0.75)
     df["ind_high_encounter_rate"] = (df["encounter_rate"] > enc_p75).astype(int)
     logger.info(f"  high_encounter_rate (> {enc_p75:.3f}): {df['ind_high_encounter_rate'].sum():,}")
 
-    # High loitering rate: > p75 of loitering_rate
-    loit_p75 = df["loitering_rate"].quantile(0.75)
+    # High loitering rate: > p75 of loitering_rate (training period)
+    loit_p75 = df_train["loitering_rate"].quantile(0.75)
     df["ind_high_loitering_rate"] = (df["loitering_rate"] > loit_p75).astype(int)
     logger.info(f"  high_loitering_rate (> {loit_p75:.3f}): {df['ind_high_loitering_rate'].sum():,}")
 
-    # Far offshore: > p90 of avg_distance_shore
-    shore_p90 = df["avg_distance_shore"].quantile(0.90)
+    # Far offshore: > p90 of avg_distance_shore (training period)
+    shore_p90 = df_train["avg_distance_shore"].quantile(0.90)
     df["ind_far_offshore"] = (df["avg_distance_shore"] > shore_p90).astype(int)
     logger.info(f"  far_offshore (> {shore_p90:.1f} km): {df['ind_far_offshore'].sum():,}")
 

@@ -77,3 +77,10 @@ GFW_EVENTS_ENRICHED = "gfw_events_enriched.parquet"
 VESSEL_BEHAVIORAL = "vessel_behavioral_features.parquet"
 GFW_EVENTS_FULL = "gfw_events_full.parquet"
 GFW_EVENTS_LABELED = "gfw_events_labeled.parquet"
+
+# ===== TEMPORAL SPLIT BOUNDARIES =====
+# Training period cutoff: all feature/label computation uses only data before this date
+# to prevent information leakage. Matches Phase 6 split (train ends 2023-W52).
+TRAIN_CUTOFF = "2024-01-01"
+# Earliest valid event date (filter outliers from source data)
+DATA_START = "2020-01-01"

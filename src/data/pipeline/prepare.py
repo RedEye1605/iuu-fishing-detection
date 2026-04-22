@@ -113,32 +113,57 @@ def encode_categorical_features(nodes: pd.DataFrame) -> tuple[pd.DataFrame, dict
     return nodes, encoders
 
 
-def compute_training_weights(labels: np.ndarray) -> dict:
-    """Compute class and edge type weights for balanced training.
+def compute_training_weights(split_assignment: dict, snapshots: dict) -> dict:
+    """Compute class weights from per-snapshot training labels.
+
+    Uses snapshot-level label distribution from training split (not vessel-level)
+    because the model trains on per-snapshot vessel labels.
 
     Args:
-        labels: Vessel-level label array.
+        split_assignment: Dict with train/val/test week lists.
+        snapshots: Full graph snapshot data.
 
     Returns:
         Dict with 'class_weights' and 'class_counts'.
     """
-    logger.info("--- Computing Training Weights ---")
+    logger.info("--- Computing Training Weights (snapshot-level) ---")
 
+    # Collect all per-snapshot labels from training split
+    train_weeks = set(split_assignment["train"])
+    all_labels = []
+    for week, data in snapshots.items():
+        if week in train_weeks:
+            all_labels.extend(data["labels"])
+
+    labels = np.array(all_labels, dtype=np.int64)
     unique, counts = np.unique(labels, return_counts=True)
     total = len(labels)
-    n_classes = len(unique)
+    n_classes = 4  # Always 4 classes for stable weights
 
     # Inverse frequency weighting: w_c = N / (C * n_c)
-    weights = total / (n_classes * counts.astype(np.float32))
+    # Use full 4-class range even if some classes have 0 count in a split
+    weight_arr = np.ones(n_classes, dtype=np.float32)
+    for cls, cnt in zip(unique.tolist(), counts.tolist()):
+        if cls < n_classes:
+            weight_arr[cls] = total / (n_classes * cnt)
+
+    # Cap extreme weights (probable_iuu can be very rare at vessel level)
+    weight_arr = np.clip(weight_arr, 0.1, 10.0)
+
+    # Normalize so weights sum to n_classes (keeps loss scale consistent)
+    weight_arr = weight_arr / weight_arr.sum() * n_classes
+
+    label_map = {0: "normal", 1: "suspicious", 2: "probable_iuu", 3: "hard_iuu"}
+    logger.info(f"  Snapshot-level label counts (train): {total:,} total")
+    for cls in range(n_classes):
+        cnt = counts[unique == cls][0] if cls in unique else 0
+        logger.info(f"    {label_map[cls]:15s}: {cnt:>8,} ({cnt/total*100:5.1f}%), weight={weight_arr[cls]:.3f}")
 
     result = {
-        "class_weights": weights.tolist(),
+        "class_weights": weight_arr.tolist(),
         "class_counts": counts.tolist(),
         "total": total,
     }
-
-    logger.info(f"  Class weights: {dict(zip(unique.tolist(), [round(w, 3) for w in weights]))}")
-    logger.info(f"  Class counts: {dict(zip(unique.tolist(), counts.tolist()))}")
 
     return result
 
@@ -263,26 +288,55 @@ def run_prepare_all() -> dict:
     # Step 1: Encode categorical features
     nodes, encoders = encode_categorical_features(nodes)
 
-    # Step 2: Build feature matrix
+    # Step 2: Build feature matrix — separate embedding indices from continuous features
     label_col = "vessel_iuu_label"
-    # Drop non-numeric columns that survived encoding
-    drop_cols = [label_col, "first_seen", "last_seen"]
-    labels = nodes[label_col].values.astype(np.int64)
-    features = nodes.drop(columns=[c for c in drop_cols if c in nodes.columns]).values.astype(np.float32)
+    # Embedding indices: used for lookup tables, NOT as continuous features
+    embed_cols = {"vessel_flag_code", "vessel_class_code"}
+    # Non-feature columns to drop
+    drop_cols = {label_col, "first_seen", "last_seen"}
 
-    feature_names = nodes.drop(columns=[c for c in drop_cols if c in nodes.columns]).columns.tolist()
+    labels = nodes[label_col].values.astype(np.int64)
+
+    # Extract embedding indices separately
+    if "vessel_flag_code" in nodes.columns:
+        flag_indices = nodes["vessel_flag_code"].values.astype(np.int64)
+        np.save(OUTPUT / "vessel_flag_indices.npy", flag_indices)
+        logger.info(f"  ✅ Flag indices saved: {flag_indices.shape} (range 0-{flag_indices.max()})")
+    if "vessel_class_code" in nodes.columns:
+        class_indices = nodes["vessel_class_code"].values.astype(np.int64)
+        np.save(OUTPUT / "vessel_class_indices.npy", class_indices)
+        logger.info(f"  ✅ Class indices saved: {class_indices.shape} (range 0-{class_indices.max()})")
+
+    # Continuous feature matrix (exclude embedding indices + non-features)
+    all_drop = drop_cols | embed_cols
+    feature_cols = [c for c in nodes.columns if c not in all_drop]
+    features_df = nodes[feature_cols].copy()
+
+    # Impute remaining NaN (vessels without flag → is_domestic=0, etc.)
+    nan_per_col = features_df.isnull().sum()
+    nan_cols = nan_per_col[nan_per_col > 0]
+    if len(nan_cols):
+        logger.info(f"  Final NaN imputation for {len(nan_cols)} columns:")
+        for col, n in nan_cols.items():
+            default = 0 if col != "is_domestic" else 0
+            logger.info(f"    {col}: {n:,} NaN → {default}")
+            features_df[col] = features_df[col].fillna(default)
+
+    features = features_df.values.astype(np.float32)
+
+    with open(OUTPUT / "feature_names.json", "w") as f:
+        json.dump(feature_cols, f)
 
     np.save(OUTPUT / "node_features.npy", features)
     np.save(OUTPUT / "node_labels.npy", labels)
-    with open(OUTPUT / "feature_names.json", "w") as f:
-        json.dump(feature_names, f)
 
     logger.info(f"  ✅ Feature matrix: {features.shape} ({features.dtype})")
     logger.info(f"     NaN: {np.isnan(features).sum()}, Inf: {np.isinf(features).sum()}")
-    logger.info(f"     Features: {feature_names}")
+    logger.info(f"     Continuous features ({len(feature_cols)}): {feature_cols}")
+    logger.info(f"     Embedding indices (separate): {sorted(embed_cols & set(nodes.columns))}")
 
-    # Step 3: Compute class weights
-    weight_info = compute_training_weights(labels)
+    # Step 3: Compute class weights from training snapshot labels
+    weight_info = compute_training_weights(split_assignment, snapshots)
     class_weights = np.array(weight_info["class_weights"], dtype=np.float32)
     np.save(OUTPUT / "class_weights.npy", class_weights)
     logger.info(f"  ✅ Class weights saved: {class_weights}")
@@ -310,8 +364,8 @@ def run_prepare_all() -> dict:
     assert not np.isnan(features).any(), "NaN in features!"
     assert not np.isinf(features).any(), "Inf in features!"
     assert labels.min() >= 0 and labels.max() <= 3, f"Labels out of range: [{labels.min()}, {labels.max()}]"
-    assert features.shape[0] == labels.shape[0] == 14857
-    logger.info(f"  ✅ {features.shape[0]} nodes × {features.shape[1]} features")
+    assert features.shape[0] == labels.shape[0]
+    logger.info(f"  ✅ {features.shape[0]} nodes × {features.shape[1]} continuous features")
     logger.info(f"  ✅ Labels ∈ [0, 3]")
     logger.info(f"  ✅ No NaN, No Inf")
 
