@@ -169,7 +169,7 @@ Score normalized to [0, 1]; threshold-based label assignment.
 | `sar_presence_clean.parquet` | 742,075 | 18 | Cleaned SAR presence |
 | `zenodo_effort_clean.parquet` | 707,118 | 12 | Cleaned Zenodo effort (spatially filtered) |
 | `ports.parquet` | 30 | 3 | Indonesia port locations |
-| `vessel_node_features.parquet` | 14,857 | 47 | Vessel graph node features (normalized) |
+| `vessel_node_features.parquet` | 14,857 | 42 | Vessel graph node features (normalized) |
 | `encounter_edges.parquet` | 46,239 | — | Encounter edges (transshipment) |
 | `colocation_edges.parquet` | 477,914 | — | Co-location edges (temporally scoped) |
 | `snapshot_metadata.parquet` | 283 | — | Weekly graph snapshot stats |

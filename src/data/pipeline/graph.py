@@ -123,6 +123,18 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
             agg_df = agg_df.drop(columns=overlap)
         node_df = node_df.join(agg_df, how="left")
 
+    # Remove redundant features: fishing_lat/lon_mean ≈ mean_lat/lon (r>0.98)
+    redundant = ["fishing_lat_mean", "fishing_lon_mean",
+                 # High correlation with existing features (r>0.90)
+                 "max_distance_shore",      # r=0.955 with avg_distance_shore
+                 "encounters_with_foreign", # r=0.946 with encounter_count
+                 "avg_fishing_distance",    # r=0.913 with avg_fishing_duration
+                 ]
+    for c in redundant:
+        if c in node_df.columns:
+            node_df = node_df.drop(columns=[c])
+            logger.info(f"  Removed redundant feature: {c} (duplicates mean_lat/lon)")
+
     node_df = node_df.join(vessel_labels, how="left")
 
     # Add has_registry indicator (many vessels have no registry match)
@@ -391,6 +403,15 @@ def run_graph_all() -> dict:
     # Exclude the label from normalization
     normalize_cols = [c for c in numeric_cols if c != "vessel_iuu_label"]
     logger.info(f"  Normalizing {len(normalize_cols)} numeric features...")
+
+    # Impute NaN with 0 BEFORE scaling (vessels without fishing/registry data)
+    nan_counts = node_df[normalize_cols].isnull().sum()
+    nan_cols = nan_counts[nan_counts > 0]
+    if len(nan_cols):
+        logger.info(f"  Imputing NaN → 0 for {len(nan_cols)} columns:")
+        for col, n in nan_cols.items():
+            logger.info(f"    {col}: {n:,} NaN ({n/len(node_df)*100:.1f}%)")
+    node_df[normalize_cols] = node_df[normalize_cols].fillna(0)
 
     scaler = StandardScaler()
     node_df[normalize_cols] = scaler.fit_transform(node_df[normalize_cols])

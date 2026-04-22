@@ -108,26 +108,30 @@ Pre-clean. `date` (str), `year` (i64), `month` (i64), `cell_ll_lat` (f64), `cell
 
 ## Graph Output Files (Phase 5)
 
-### `vessel_node_features.parquet` (14,857 rows × 47 cols)
+### `vessel_node_features.parquet` (14,857 rows × 42 cols)
 Per-vessel feature matrix for graph neural network. Features are StandardScaler-normalized. Key: `mmsi` (string, unique).
 
-**Spatial (4):** `mean_lat` (f64), `mean_lon` (f64), `std_lat` (f64), `std_lon` (f64)
+**Spatial (4):** `mean_lat`, `mean_lon`, `std_lat`, `std_lon`
 
-**Temporal (3):** `mean_hour` (f64), `nighttime_ratio` (f64), `weekend_ratio` (f64)
+**Temporal (3):** `mean_hour`, `nighttime_ratio`, `weekend_ratio`
 
-**Behavioral (27):** From `vessel_behavioral_features.parquet` (fishing_count, loitering_rate, encounter_rate, spatial_range_km, unique_grid_cells, etc.)
+**Behavioral (17):** fishing_count, encounter_count, loitering_count, port_visit_count, avg_fishing_duration, total_fishing_hours, avg_distance_shore, spatial_range_km, unique_grid_cells, avg_speed_knots, speed_std, total_loitering_hours, avg_port_duration, encounter_rate, loitering_rate, fishing_ratio, total_events
 
-**Registry (4):** `reg_length_m` (f64), `reg_tonnage_gt` (f64), `reg_engine_power_kw` (f64), `reg_vessel_class` (str)
+**Identity (5):** `vessel_flag`, `is_domestic`, `tracking_span_days`, `first_seen`, `last_seen`
 
-**Registry indicator (1):** `has_registry` (int: 0/1)
+**Registry (4):** `reg_length_m`, `reg_tonnage_gt`, `reg_engine_power_kw`, `reg_vessel_class`
 
-**Risk proxies (3):** `unauthorized_count` (i64), `highseas_count` (i64), `mpa_count` (i64)
+**Registry indicator (1):** `has_registry`
 
-**Context (3):** `mean_sar_detections` (f64), `mean_effort_hours` (f64), `in_highseas_ratio` (f64)
+**Risk proxies (3):** `unauthorized_count`, `highseas_count`, `mpa_count`
 
-**Label (1):** `vessel_iuu_label` (int: 0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu) — NOT normalized
+**Context (3):** `mean_sar_detections`, `mean_effort_hours`, `in_highseas_ratio`
 
-**Key (1):** `mmsi` (str)
+**Label (1):** `vessel_iuu_label` (0=normal, 1=suspicious, 2=probable_iuu, 3=hard_iuu) — NOT normalized
+
+**Key (1):** `mmsi`
+
+Total: 42 columns (35 numeric features normalized + 1 label + 1 key + 5 identity)
 
 ### `feature_scaler.pkl`
 Pickled dict with `scaler` (StandardScaler) and `columns` (list of normalized column names). Use for inference-time normalization.
