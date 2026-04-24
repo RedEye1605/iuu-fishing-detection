@@ -1,0 +1,25 @@
+{
+  "best_epoch": 2,
+  "best_val_macro_f1": 0.3076,
+  "test_macro_f1": 0.2884,
+  "test_weighted_f1": 0.3163,
+  "test_loss": 1.2064,
+  "total_epochs": 2,
+  "total_time_minutes": 0.1,
+  "model_params": 70238,
+  "seed": 42,
+  "config": {
+    "epochs": 2,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "patience": 2,
+    "hidden_dim": 64,
+    "num_heads": 4,
+    "dropout": 0.3,
+    "embed_dim": 8,
+    "label_smoothing": 0.1,
+    "seed": 42,
+    "baseline": null,
+    "device": "cpu"
+  }
+}

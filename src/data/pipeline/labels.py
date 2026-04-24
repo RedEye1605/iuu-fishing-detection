@@ -215,8 +215,9 @@ def compute_tier2_indicators(df: pd.DataFrame) -> pd.DataFrame:
     # Use a stricter threshold: >72h gap between consecutive events for fishing vessels
     # that also have low total event count (suggests sporadic AIS usage, not just port time).
     AIS_GAP_THRESHOLD = 72.0
-    # Sort and compute gaps from all events (need full timeline)
-    df_sorted = df.sort_values(["mmsi", "start_time"])
+    # Compute gaps from training period only (prevents leakage from test-period gaps)
+    train_cutoff = pd.Timestamp(TRAIN_CUTOFF, tz="UTC")
+    df_sorted = df[df["start_time"] < train_cutoff].sort_values(["mmsi", "start_time"])
     fishing_events = df_sorted[df_sorted["event_type"] == "fishing"].copy()
     if len(fishing_events) > 0:
         fishing_events = fishing_events.sort_values(["mmsi", "start_time"])
@@ -360,10 +361,10 @@ def assign_iuu_labels(df: pd.DataFrame) -> pd.DataFrame:
     """Assign categorical IUU labels based on score thresholds.
 
     Labels:
-        normal: score < 0.15
-        suspicious: 0.15 ≤ score < 0.3
-        probable_iuu: 0.3 ≤ score < 0.5
-        hard_iuu: score ≥ 0.5
+        normal: score < 0.10
+        suspicious: 0.10 ≤ score < 0.50
+        probable_iuu: 0.50 ≤ score < 0.55
+        hard_iuu: score ≥ 0.55
 
     Args:
         df: Events DataFrame with iuu_score column.

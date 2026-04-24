@@ -286,6 +286,7 @@ class STGAT(nn.Module):
         num_heads: int = 4,
         dropout: float = 0.3,
         num_edge_types: int = 2,
+        edge_dim: int = 2,
         label_smoothing: float = 0.1,
     ) -> None:
         super().__init__()
@@ -309,6 +310,7 @@ class STGAT(nn.Module):
             num_heads=num_heads,
             dropout=dropout,
             edge_types=num_edge_types,
+            edge_dim=edge_dim,
         )
 
         # Temporal encoder
@@ -333,7 +335,7 @@ class STGAT(nn.Module):
         total_params = sum(p.numel() for p in self.parameters())
         logger.info(
             "ST-GAT initialized: continuous_dim=%d, hidden=%d, heads=%d, "
-            "edge_types=%d, label_smoothing=%.2f, params=%,d",
+            "edge_types=%d, label_smoothing=%.2f, params=%d",
             continuous_dim, hidden_dim, num_heads, num_edge_types,
             label_smoothing, total_params,
         )
@@ -457,11 +459,11 @@ class STGATClassifier(nn.Module):
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout * 0.5),
             nn.Linear(hidden_dim, hidden_dim // 2),

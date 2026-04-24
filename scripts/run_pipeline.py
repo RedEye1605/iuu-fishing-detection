@@ -25,6 +25,7 @@ STEPS = [
     ("graph",   "src.data.pipeline.graph",    "run_graph_all"),
     ("split",   "src.data.pipeline.split",    "run_split_all"),
     ("prepare", "src.data.pipeline.prepare",  "run_prepare_all"),
+    ("train",   "src.train.runner",             "run_train_all"),
 ]
 
 PHASE_MAP = {
@@ -35,6 +36,7 @@ PHASE_MAP = {
     "5": ["graph"],
     "6": ["split"],
     "7": ["prepare"],
+    "8": ["train"],
 }
 
 
@@ -65,7 +67,7 @@ def main() -> None:
         sys.path.insert(0, project_root)
 
     parser = argparse.ArgumentParser(description="IUU Fishing Detection Pipeline Runner")
-    parser.add_argument("--phase", choices=["1","2","3","4","5","6","7"], help="Run only this phase")
+    parser.add_argument("--phase", choices=["1","2","3","4","5","6","7","8"], help="Run only this phase")
     parser.add_argument("--step", help="Run a specific step (extract|clean|features|labels|graph|split|prepare)")
     args = parser.parse_args()
 
@@ -75,8 +77,8 @@ def main() -> None:
         for step_id in PHASE_MAP[args.phase]:
             run_step(step_id)
     else:
-        logger.info("🚀 Running full pipeline (Phase 1 → 7)")
-        for phase in ["1","2","3","4","5","6","7"]:
+        logger.info("🚀 Running full pipeline (Phase 1 → 8)")
+        for phase in ["1","2","3","4","5","6","7","8"]:
             logger.info(f"\n{'='*60}\n  PHASE {phase}\n{'='*60}")
             for step_id in PHASE_MAP[phase]:
                 run_step(step_id)
