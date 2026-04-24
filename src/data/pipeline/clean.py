@@ -280,7 +280,10 @@ def clean_events() -> Path:
         mask = (df["event_type"] == etype) & (df["duration_hours"] > cap)
         capped = mask.sum()
         if capped > 0:
-            p99 = df.loc[df["event_type"] == etype, "duration_hours"].quantile(0.99)
+            # Compute percentile from training period only (prevents leakage)
+            # Training cutoff aligned with Phase 6 split (train ends 2023-W50)
+            train_cutoff = pd.Timestamp("2023-12-11", tz="UTC")
+            p99 = df.loc[(df["event_type"] == etype) & (df["start_time"] < train_cutoff), "duration_hours"].quantile(0.99)
             actual_cap = min(cap, p99 * 1.5)
             df.loc[mask, "duration_hours"] = actual_cap
             logger.info(f"  {etype}: capped {capped:,} events > {cap}h")

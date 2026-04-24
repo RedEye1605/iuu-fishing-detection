@@ -23,9 +23,10 @@ Output:
   ├── feature_names.json         # Feature column names (ordered)
   ├── encoders.pkl               # LabelEncoder + frequency maps
   ├── class_weights.npy           # (4,) float32 class weights
-  ├── edge_type_weights.npy       # (2,) float32 edge type weights
-  ├── vessel_flag_embed.npy       # (127, 8) flag embedding init
-  ├── vessel_class_embed.npy      # (16, 8) class embedding init
+  ├── vessel_flag_embed.npy       # (121, 8) flag embedding init
+  ├── vessel_class_embed.npy      # (17, 8) class embedding init
+  ├── vessel_flag_indices.npy     # (N,) int64 flag embedding indices
+  ├── vessel_class_indices.npy    # (N,) int64 class embedding indices
   ├── mmsi_index.json             # MMSI → index mapping
   └── snapshots/
       ├── {split}/

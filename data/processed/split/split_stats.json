@@ -33,10 +33,10 @@
     "encounter_edges": 2994,
     "colocation_edges": 22366,
     "label_distribution": {
-      "hard_iuu": 0.23,
-      "normal": 0.283,
-      "probable_iuu": 0.145,
-      "suspicious": 0.342
+      "hard_iuu": 0.229,
+      "normal": 0.284,
+      "probable_iuu": 0.146,
+      "suspicious": 0.341
     },
     "flag_distribution": {
       "domestic": 0.39,
@@ -58,9 +58,9 @@
     "encounter_edges": 5854,
     "colocation_edges": 32081,
     "label_distribution": {
-      "hard_iuu": 0.312,
+      "hard_iuu": 0.311,
       "normal": 0.283,
-      "probable_iuu": 0.18,
+      "probable_iuu": 0.181,
       "suspicious": 0.225
     },
     "flag_distribution": {

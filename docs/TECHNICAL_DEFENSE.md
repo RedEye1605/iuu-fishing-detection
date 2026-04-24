@@ -53,7 +53,7 @@ This graph-structured approach follows the Temporal Graph Network framework (Ros
 | CNN on spatial grids | Loses vessel identity; fixed grid resolution; no temporal modeling |
 | LSTM per vessel | Ignores encounter/co-location structure; vessels processed independently |
 | Static GNN | Ignores temporal dynamics (behavior changes over weeks/months) |
-| **ST-GAT (ours)** | **Captures both vessel interactions (spatial) and behavioral evolution (temporal)** |
+| **ST-GAT (ours)** | **Captures vessel interactions (spatial) via edge-type-aware attention** |
 
 ---
 
@@ -473,18 +473,18 @@ Residual connections (He et al., 2016) provide two benefits:
 
 For the first layer, a linear projection (`input_proj`) maps the input dimension (40) to the hidden dimension (64) before adding to the GATv2 output. This dimension-matching is necessary for the residual to work.
 
-### 7.5 Why GRU Temporal Encoder?
+### 7.5 Temporal Encoder (Available, Not Currently Used in Training)
 
-**Decision**: Single-layer GRU (Cho et al., 2014) over the sequence of weekly spatial embeddings.
+**Design**: A single-layer GRU (Cho et al., 2014) is included in the model architecture, processing sequences of weekly spatial embeddings via `forward_temporal()`. However, the current training loop (`scripts/train.py`) uses snapshot-level training via `forward()` — processing each weekly graph independently.
 
-**Why GRU over LSTM?** For our sequence length (up to 208 weekly snapshots for training), GRU provides:
-- Comparable performance to LSTM with fewer parameters (no separate cell state)
-- Faster training and inference
-- Sufficient for learning weekly behavioral patterns (IUU fishing patterns evolve over weeks/months, not long-term dependencies requiring LSTM's cell memory)
+**Why snapshot-level for now?** Each weekly snapshot contains a different set of vessels (152–3,397 per week). The GRU's `forward_temporal()` requires the same N vessels across all T timesteps, which doesn't match our dynamic graph structure. Implementing proper temporal training requires either: (a) vessel-intersection sequences (very restrictive, loses most vessels), or (b) padding/masking (complex, risks artificial patterns). For a competition with limited compute, snapshot-level training is the pragmatic choice.
 
-**Why not a Transformer?** Transformer attention over 200+ snapshots would be O(T²) in memory and computation. GRU is O(T) — a practical choice given our sequence length and computational constraints. A single GRU layer is used (not stacked) to keep the model simple — overfitting is a bigger risk than underfitting for temporal patterns.
+**Why keep the GRU in the model?** The temporal encoder is architecturally ready. For future work with vessel-centric sequence alignment or sliding-window approaches, the GRU can be activated without any model changes. This design separates the spatial contribution (GATv2 with edge-type attention) from the temporal contribution (GRU sequence modeling).
 
-**Why not use the full hidden state sequence?** The GRU produces a hidden state at each timestep, but we use only the **final hidden state** (after LayerNorm) for classification. This gives the model a single, compressed representation of the vessel's behavioral trajectory. The final state is the most informative because it has processed the entire sequence.
+**GRU design rationale** (for future temporal training):
+- GRU over LSTM: fewer parameters, faster, sufficient for weekly patterns
+- GRU over Transformer: O(T) vs O(T²) memory; practical for 200+ snapshots
+- Single layer: reduces overfitting risk
 
 ### 7.6 Why Separate Embedding for Categorical Features?
 
@@ -500,7 +500,7 @@ For the first layer, a linear projection (`input_proj`) maps the input dimension
 
 ### 7.7 Why MLP Classification Head?
 
-**Decision**: 3-layer MLP (64 → 64 → 32 → 4) with ReLU, BatchNorm, and Dropout.
+**Decision**: 3-layer MLP (64 → 64 → 32 → 4) with ReLU and Dropout.
 
 The classification head maps the final node representation (64-dim) to 4-class logits. Key design choices:
 
@@ -635,7 +635,7 @@ These are run as assertions that fail the pipeline if violated, preventing silen
 
 | # | Decision | Alternative Considered | Chosen Because |
 |---|----------|----------------------|----------------|
-| 1 | ST-GAT | XGBoost, LSTM, static GNN | Captures both spatial (vessel interactions) and temporal (behavioral evolution) patterns |
+| 1 | ST-GAT | XGBoost, LSTM, static GNN | Captures vessel interactions (spatial) via edge-type-specific GATv2 attention. Temporal GRU encoder available for future sequence-level training. |
 | 2 | GATv2Conv | Standard GAT, GraphSAGE, GCN | Dynamic attention over concatenation avoids static attention degeneracy |
 | 3 | Weakly supervised labels | Manual annotation, self-supervised | Only feasible approach at 500K+ events; research-backed indicators |
 | 4 | 3-tier scoring | Single-score, binary | Differentiated confidence levels enable nuanced risk assessment |

@@ -7,7 +7,6 @@ Labels are based on indicators we can actually derive from available data.
 Tier 1 — Hard IUU (weight 1.0):
   - fishing_in_mpa: Fishing inside no-take MPA
   - unauthorized_foreign: Foreign vessel fishing without authorization in EEZ
-  - foreign_no_auth_data: Foreign vessel fishing with unknown/missing authorization
   - high_seas_fishing: Fishing outside any EEZ
 
 Tier 2 — Suspicious Activity (weight 0.6):

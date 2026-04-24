@@ -1,12 +1,12 @@
 {
   "best_epoch": 2,
-  "best_val_macro_f1": 0.3076,
-  "test_macro_f1": 0.2884,
-  "test_weighted_f1": 0.3163,
-  "test_loss": 1.2064,
+  "best_val_macro_f1": 0.4826,
+  "test_macro_f1": 0.5444,
+  "test_weighted_f1": 0.6249,
+  "test_loss": 1.1384,
   "total_epochs": 2,
-  "total_time_minutes": 0.1,
-  "model_params": 70238,
+  "total_time_minutes": 0.0,
+  "model_params": 30788,
   "seed": 42,
   "config": {
     "epochs": 2,
@@ -19,7 +19,7 @@
     "embed_dim": 8,
     "label_smoothing": 0.1,
     "seed": 42,
-    "baseline": null,
+    "baseline": "mlp",
     "device": "cpu"
   }
 }

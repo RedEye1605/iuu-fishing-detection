@@ -68,12 +68,13 @@ uv sync --extra ml
 ## Running the Pipeline
 
 ```bash
-python scripts/run_pipeline.py              # Run all phases (1-7)
-python scripts/run_pipeline.py --phase 4    # Run only labeling
+python scripts/run_pipeline.py              # Run all phases (1-8)
+python scripts/run_pipeline.py --phase 4    # Run enrichment + labeling
 python scripts/run_pipeline.py --step graph   # Run graph construction
+python scripts/run_pipeline.py --phase 8    # Run model training
 ```
 
-Total runtime: ~15-20 minutes.
+Total runtime: ~15-20 minutes (pipeline) + 20-60 min (training).
 
 ## Dataset
 
@@ -87,7 +88,7 @@ Total runtime: ~15-20 minutes.
 | Continuous features | 40 per vessel |
 | Embedding indices | 2 (flag, class) |
 | Edge types | 2 (encounter, colocation) |
-| Edge attributes | 2 (duration_km, distance_km) |
+| Edge attributes | 2 (duration_hours, distance_km) |
 
 ### Label Distribution
 

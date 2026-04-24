@@ -204,7 +204,6 @@ def compute_behavioral_features() -> Path:
 
     # Use only training period for behavioral profiling (prevents label leakage)
     train_cutoff = pd.Timestamp(TRAIN_CUTOFF, tz="UTC")
-    df_all = df.copy()
     df = df[df["start_time"] < train_cutoff].copy()
     logger.info(f"Training period only: {len(df):,} events from {df['mmsi'].nunique():,} vessels")
 

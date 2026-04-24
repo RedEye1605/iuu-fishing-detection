@@ -70,7 +70,7 @@ The master enriched events table used for modeling.
 
 **SAR/Effort (4):** `sar_total_detections` (f64), `sar_unique_vessels` (i64), `effort_hours_in_cell` (f64), `effort_vessels_in_cell` (i64)
 
-**Behavioral (22):** `total_events` (i64), `first_seen` (ts UTC), `last_seen` (ts UTC), `tracking_span_days` (f64), `fishing_count` (i64), `encounter_count` (i64), `loitering_count` (i64), `port_visit_count` (i64), `avg_fishing_duration` (f64), `total_fishing_hours` (f64), `avg_fishing_distance` (f64), `fishing_lat_mean` (f64), `fishing_lon_mean` (f64), `avg_distance_shore` (f64), `max_distance_shore` (i64), `spatial_range_km` (f64), `unique_grid_cells` (i64), `speed_std` (f64), `encounters_total` (i64), `encounters_with_foreign` (i64), `loitering_events` (i64), `total_loitering_hours` (f64), `port_visits` (i64), `avg_port_duration` (f64), `encounter_rate` (f64), `loitering_rate` (f64), `fishing_ratio` (f64), `avg_fishing_hours_per_trip` (f64)
+**Behavioral (25):** `total_events` (i64), `first_seen` (ts UTC), `last_seen` (ts UTC), `tracking_span_days` (f64), `fishing_count` (i64), `encounter_count` (i64), `loitering_count` (i64), `port_visit_count` (i64), `avg_fishing_duration` (f64), `total_fishing_hours` (f64), `avg_fishing_distance` (f64), `fishing_lat_mean` (f64), `fishing_lon_mean` (f64), `avg_distance_shore` (f64), `max_distance_shore` (i64), `spatial_range_km` (f64), `unique_grid_cells` (i64), `avg_speed_knots` (f64), `speed_std` (f64), `encounters_with_foreign` (i64), `total_loitering_hours` (f64), `avg_port_duration` (f64), `encounter_rate` (f64), `loitering_rate` (f64), `fishing_ratio` (f64)
 
 ---
 

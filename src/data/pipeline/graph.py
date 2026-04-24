@@ -4,7 +4,7 @@ Phase 5: Graph Construction for ST-GAT
 Build vessel-centric spatiotemporal graphs for the ST-GAT model.
 
 Graph Structure:
-  NODES: Vessels (14,857 unique MMSIs)
+  NODES: Vessels (unique MMSIs)
   NODE FEATURES: Aggregated behavioral + registry + IUU features per vessel
 
   EDGES: Two types
@@ -126,10 +126,10 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
         in_highseas_ratio=("in_highseas", "mean"),
     )
 
-    # IUU label: take the max label across all events for this vessel
+    # IUU label: take the max label across training-period events only (prevents leakage)
     label_map = {"normal": 0, "suspicious": 1, "probable_iuu": 2, "hard_iuu": 3}
-    vessel_labels = df.groupby("mmsi")["iuu_label"].apply(
-        lambda x: x.map(label_map).max()
+    vessel_labels = df_train.groupby("mmsi")["iuu_label"].apply(
+        lambda x: x.map(label_map).max() if len(x) > 0 else 0
     ).rename("vessel_iuu_label")
 
     # Merge all — LEFT JOIN preserves ALL vessels, NaN for test-only
@@ -156,6 +156,7 @@ def build_vessel_node_features(df: pd.DataFrame) -> pd.DataFrame:
     node_df["has_port_data"] = node_df["avg_port_duration"].notna().astype(int)
 
     node_df = node_df.join(vessel_labels, how="left")
+    node_df["vessel_iuu_label"] = node_df["vessel_iuu_label"].fillna(0).astype(int)
 
     # Add has_registry indicator (many vessels have no registry match)
     node_df["has_registry"] = node_df["reg_length_m"].notna().astype(int)
@@ -338,7 +339,6 @@ def build_weekly_snapshots(
     # Pre-compute year_week for co-location: use event dates
     # Co-location edges are derived from events, so assign them year_week from source events
     df["event_date"] = starts.dt.date
-    event_yw = df[["mmsi", "event_date", "year_week"]].drop_duplicates()
 
     # Build MMSI → node index mapping
     mmsi_to_idx = {m: i for i, m in enumerate(node_df["mmsi"].values)}

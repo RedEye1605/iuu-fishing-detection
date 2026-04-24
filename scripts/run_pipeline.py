@@ -21,6 +21,7 @@ STEPS = [
     ("extract",  "src.data.pipeline.extract", "run_extract_all"),
     ("clean",   "src.data.pipeline.clean",   "run_clean_all"),
     ("features", "src.data.pipeline.features", "run_features_all"),
+    ("enrich",  "src.data.pipeline.enrich",  "run_enrich_all"),
     ("labels",  "src.data.pipeline.labels",   "run_label_all"),
     ("graph",   "src.data.pipeline.graph",    "run_graph_all"),
     ("split",   "src.data.pipeline.split",    "run_split_all"),
@@ -32,7 +33,7 @@ PHASE_MAP = {
     "1": ["extract"],
     "2": ["clean"],
     "3": ["features"],
-    "4": ["labels"],
+    "4": ["enrich", "labels"],
     "5": ["graph"],
     "6": ["split"],
     "7": ["prepare"],
@@ -48,18 +49,17 @@ def run_step(step_id: str) -> None:
         sys.exit(1)
 
     _, module_path, func_name = match[0]
-    logger.info(f"▶ Running step {step_id} ({module_path}.{func_name})")
+    logger.info(f"Running step {step_id} ({module_path}.{func_name})")
 
     import importlib
     t0 = time.time()
     mod = importlib.import_module(module_path)
     getattr(mod, func_name)()
     elapsed = time.time() - t0
-    logger.info(f"✅ Step {step_id} complete ({elapsed:.1f}s)")
+    logger.info(f"Step {step_id} complete ({elapsed:.1f}s)")
 
 
 def main() -> None:
-    import sys
     from pathlib import Path
     # Ensure project root is on sys.path for `src` imports
     project_root = str(Path(__file__).resolve().parent.parent)
@@ -68,7 +68,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="IUU Fishing Detection Pipeline Runner")
     parser.add_argument("--phase", choices=["1","2","3","4","5","6","7","8"], help="Run only this phase")
-    parser.add_argument("--step", help="Run a specific step (extract|clean|features|labels|graph|split|prepare)")
+    parser.add_argument("--step", help="Run a specific step (extract|clean|features|enrich|labels|graph|split|prepare)")
     args = parser.parse_args()
 
     if args.step:
@@ -77,12 +77,12 @@ def main() -> None:
         for step_id in PHASE_MAP[args.phase]:
             run_step(step_id)
     else:
-        logger.info("🚀 Running full pipeline (Phase 1 → 8)")
+        logger.info("Running full pipeline (Phase 1-8)")
         for phase in ["1","2","3","4","5","6","7","8"]:
             logger.info(f"\n{'='*60}\n  PHASE {phase}\n{'='*60}")
             for step_id in PHASE_MAP[phase]:
                 run_step(step_id)
-        logger.info("\n🎉 Full pipeline complete!")
+        logger.info("\nFull pipeline complete!")
 
 
 if __name__ == "__main__":
